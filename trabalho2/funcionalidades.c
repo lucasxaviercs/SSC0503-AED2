@@ -536,3 +536,104 @@ void InsertInto(char *arquivoDados, char *arquivoIndex, int nroInsercoes){
     BinarioNaTela(arquivoDados);
     BinarioNaTela(arquivoIndex); 
 }
+
+void Delete(char *arquivoDados, char *arquivoIndex, int nroRemocoes){
+    FILE *arquivoDadosBIN = fopen(arquivoDados, "rb+");
+    if (arquivoDadosBIN == NULL) {
+        mensagemErro();
+        return;
+    }
+
+    FILE *arquivoIndexBIN = fopen(arquivoIndex, "rb+");
+    if (arquivoIndexBIN == NULL) {
+        mensagemErro();
+        return;
+    }
+
+    Header cabecalho;
+    LerCabecalhoBIN(arquivoDadosBIN, &cabecalho);
+    // checagem da consistência do arquivo de dados antes de iniciar o delete
+    if (cabecalho.status == '0') {
+        MensagemErro();
+        fclose(arquivoDadosBIN);
+        fclose(arquivoIndexBIN);
+        return;
+    }
+
+    // marcar arquivo de dados como inconsistente
+    cabecalho.status = '0';
+    EscreverCabecalhoBIN(arquivoDadosBIN, &cabecalho);
+
+    // marcar índice como inconsistente também
+    IndexHeader cabecalhoIndex;
+    cabecalhoIndex.status = '0';
+    fseek(arquivoIndexBIN, 0, SEEK_SET);
+    fwrite(&cabecalhoIndex, sizeof(IndexHeader), 1, arquivoIndexBIN);
+
+    IndexRegistro *registrosIndex = NULL;
+    int totalRegs = 0;
+    CarregarIndex(arquivoIndexBIN, &registrosIndex, &totalRegs, cabecalho.nroEstacoes);
+
+    for (int i = 0; i < nroRemocoes; i++){
+        int nroCriterios;
+        scanf("%d", &nroCriterios);
+
+        CriterioBusca criterios[nroCriterios];
+        LerCriteriosBusca(criterios, nroCriterios);
+
+        fseek(arquivoDadosBIN, TAM_CABECALHO, SEEK_SET);
+
+        for(int rrnAtual = 0; rrnAtual < cabecalho.proxRRN; rrnAtual++){
+            Registro reg;
+            reg.nomeEstacao = NULL;
+            reg.nomeLinha = NULL;
+            LerRegistroBIN(arquivoDadosBIN, &reg);
+
+            if (reg.removido == '1'){
+                LiberarStringRegistro(&reg);
+                continue;
+            }
+
+            int atendeTodos = 1;
+            for(int criterio = 0; criterio < nroCriterios; criterio++){
+                if(VerificaCriterioBusca(&reg, criterios[criterio].nomeDoCampo, criterios[criterio].valorBuscado) != 1){
+                    atendeTodos = 0;
+                    break;
+                }
+            }
+
+            if (atendeTodos == 1){
+                // se atendeu os critérios, marca como removido e empilha
+                reg.removido = '1';
+                reg.proximo = cabecalho.topo; 
+                cabecalho.topo = rrnAtual;
+
+                int byteOffset = TAM_CABECALHO + (rrnAtual * TAM_REGISTRO);
+                fseek(arquivoDadosBIN, byteOffset, SEEK_SET);
+
+                fwrite(&reg.removido, sizeof(char), 1, arquivoDadosBIN);
+                fwrite(&reg.proximo, sizeof(int), 1, arquivoDadosBIN);
+                
+                cabecalho.nroEstacoes--; // atualiza o número de estações no cabeçalho
+                RemoverRegistroIndex(registrosIndex, totalRegs, reg.codEstacao);
+            }
+
+            LiberarStringRegistro(&reg);
+
+        }
+    }
+
+    // reescreve o índice após as remoções
+    ReescritaIndex(arquivoIndexBIN, registrosIndex, totalRegs);
+    free(registrosIndex);
+
+    cabecalho.status = '1';
+    EscreverCabecalhoBIN(arquivoDadosBIN, &cabecalho);
+
+    fclose(arquivoDadosBIN);
+    fclose(arquivoIndexBIN);
+
+    BinarioNaTela(arquivoDados);
+    BinarioNaTela(arquivoIndex);
+}
+        

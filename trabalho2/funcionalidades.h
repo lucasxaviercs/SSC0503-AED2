@@ -27,5 +27,9 @@
     // Busca com índice primário/ chave (codEstação) ou sequencial (demais campos, como no SelectWhere)
     void SelectWhereIndex(char *arquivoDados, char *arquivoIndex, int nroBuscas);
 
+    // Busca e remove os registros que dão match com os filtros
+    void Delete(char *arquivoDados, char *arquivoIndex, int nroRemocoes);
+
+    // Insere novos registros no arquivo de dados e atualiza o índice
     void InsertInto(char *arquivoDados, char *arquivoIndex, int nroInsercoes);
     

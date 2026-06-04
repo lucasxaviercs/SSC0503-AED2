@@ -45,14 +45,19 @@ int main(int argc, char *argv[]){
             break;
 
         case DELETE:
+        {   
+            int nroRemocoes;
+            scanf("%s %s %d", arquivoEntrada, arquivoSaida, &nroRemocoes);
+            Delete(arquivoEntrada, arquivoSaida, nroRemocoes);
             break;
-
+        }
         case INSERT_INTO:
+        {
             int nroInsercoes;
             scanf("%s %s %d", arquivoEntrada, arquivoSaida, &nroInsercoes);
             InsertInto(arquivoEntrada, arquivoSaida, nroInsercoes);
             break;
-
+        }
         case UPDATE:
             break;
         
