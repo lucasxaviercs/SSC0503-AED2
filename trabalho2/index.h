@@ -34,3 +34,6 @@
 
     // realiza a leitura da estrutura de cabeçalho dos índices
     void LerCabecalhoIndex(FILE *arquivoIndex, IndexHeader *cabecalhoIndex);
+
+    // função auxiliar para o uso do quicksort da stdlib
+    int CompararIndexRegistro(const void *A, const void *B);

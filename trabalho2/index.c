@@ -93,3 +93,9 @@ void LerCabecalhoIndex(FILE *arquivoIndex, IndexHeader *cabecalhoIndex){
     fseek(arquivoIndex, 0, SEEK_SET);
     fread(&cabecalhoIndex->status, sizeof(char), 1, arquivoIndex);
 }
+
+int CompararIndexRegistro(const void *A, const void *B){
+    IndexRegistro *RegA = (IndexRegistro *)A;
+    IndexRegistro *RegB = (IndexRegistro *)B;
+    return RegA->codEstacao - RegB->codEstacao;
+}
