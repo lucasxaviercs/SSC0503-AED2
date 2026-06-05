@@ -269,29 +269,47 @@ void CriarIndex(FILE *arquivoDados, FILE* arquivoIndex){
     cabecalhoIndex.status = '0';
     fwrite(&cabecalhoIndex, sizeof(IndexHeader), 1, arquivoIndexBIN);
 
-    // cria um array para armazenar os registros do índice conforme lê o arquivo de dados
-    // ao final, o arquivo de índice será construído reutilizando a função de reescrita que coloca o índice da RAM para o disco
-    IndexRegistro *registros = NULL;
-    int totalRegsIndex = 0;
+    // Alocamos pensando no pior cenário em que todos possuem um ID
+    IndexRegistro *registrosIndex = malloc(cabecalhoDados.proxRRN * sizeof(IndexRegistro));
+    if(!registrosIndex){
+        MensagemErro();
+        fclose(arquivoDadosBIN);
+        fclose(arquivoIndexBIN);
+    }
+
+    int totalRegs = 0;
     Registro regDados;
 
-    fseek(arquivoDadosBIN, TAM_CABECALHO, SEEK_SET);
 
-    for (int i = 0; i < cabecalhoDados.proxRRN; i++) {
+    fseek(arquivoDadosBIN, TAM_CABECALHO, SEEK_SET);
+    for(int i = 0; i < cabecalhoDados.proxRRN; i++){
+        regDados.nomeEstacao == NULL;
+        regDados.nomeLinha == NULL;
+
+        //Leitura total dos dados em disco, para colocá-los em RAM
         LerRegistroBIN(arquivoDadosBIN, &regDados);
 
-        if (regDados.removido != '1') {
-            InserirRegistroIndex(&registros, regDados.codEstacao, i, &totalRegsIndex);
+        //Se o registro NÃO estiver removido, então entra no índice
+        if(regDados.removido != 1){
+            registrosIndex[totalRegs].codEstacao = regDados.codEstacao;
+            registrosIndex[totalRegs].RRN = i;
+            totalRegs++;
         }
-
         LiberarStringRegistro(&regDados);
     }
 
-    ReescritaIndex(arquivoIndexBIN, registros, totalRegsIndex);
+    // Ordenamos de forma crescente o vetor dos números do codEstacao
+    qsort(registrosIndex, totalRegs, sizeof(IndexRegistro), CompararIndexRegistro);
 
-    free(registros);
+    // Gravamos o índice ordenado no disco + marcamos como consistente
+    ReescritaIndex(arquivoIndexBIN, registrosIndex, totalRegs);
+
+    free(registrosIndex);
+    registrosIndex == NULL;
     fclose(arquivoDadosBIN);
     fclose(arquivoIndexBIN);
+
+    BinarioNaTela(arquivoIndex);
 }
 
 void SelectWhereIndex(char *arquivoDados, char *arquivoIndex, int nroBuscas){
