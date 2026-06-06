@@ -275,7 +275,8 @@ void AplicarUpdates(Registro *reg, CriterioBusca *updates, int nroUpdates){
         const char *campo = updates[updt].nomeDoCampo;
         const char *valor = updates[updt].valorBuscado;
 
-        int ehNulo = (strlen(valor) == 0); //LerCriterioBusca já converte NULO para ""
+        //LerCriterioBusca já converte NULO para ""
+        int ehNulo = (strlen(valor) == 0);
 
         /*CAMPOS FIXOS
         Se forem NULOS -1, SE NÃO convertermos a string para inteiro*/
@@ -317,8 +318,8 @@ void AplicarUpdates(Registro *reg, CriterioBusca *updates, int nroUpdates){
                 reg->tamNomeEstacao = 0;
             }
             else { //não nulo
-                reg->nomeLinha = strdup(valor); // aloca e copia o novo valor
-                reg->tamNomeLinha = strlen(valor);
+                reg->nomeEstacao = strdup(valor); // aloca e copia o novo valor
+                reg->tamNomeEstacao = strlen(valor);
             }
         
         }
