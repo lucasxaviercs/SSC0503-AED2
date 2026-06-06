@@ -188,61 +188,6 @@ void LiberarStringRegistro(Registro *registroDados){
     }
 }
 
-int BuscaSequencial(FILE *arquivoBIN, int proxRRN, CriterioBusca *criterios, int nroCriterios){
-    int BuscaPorID = 0; // Flag de ID (codEstacao) para parar a busca quando for encotrado
-    for(int c = 0; c < nroCriterios; c++){ // Verificamos se a busca atual tem o campo codEstacao
-        if(strcmp(criterios[c].nomeDoCampo, "codEstacao") == 0){
-            BuscaPorID = 1;
-            break;
-        }
-    }
-
-    int registroEncontrado = 0; // Flag de controle ( 0 = false, 1 = true)
-    Registro reg;
-
-    // Posicionamos o ponteiro do arquivo para o ínicio dos dados (IGNORANDO O CABEÇALHO = 17 Bytes)
-    fseek(arquivoBIN, TAM_CABECALHO, SEEK_SET);
-
-    for(int rrnAtual = 0; rrnAtual < proxRRN; rrnAtual++){
-        // "Zera" os ponteiros para prevenir lixo da memoria na leitura
-        reg.nomeEstacao =NULL;
-        reg.nomeLinha = NULL;
-
-        // Preenche a struct com os dados lido do arquvio e verifica se não está removido
-        LerRegistroBIN(arquivoBIN, &reg);
-
-        // Ignoramos todos os registros inválidos
-        if(reg.removido != '1'){ // apenas uma segurança a mais para confirmar que NÃO ESTÁ REMOVIDO
-            int atendeTodosCriterios = 1; // Assumimos que registro serve (true), até que se prove o contrário
-
-            // Verifica o registro atual a partir dos criterios de busca que foram passados
-            for(int criterioAtual = 0; criterioAtual < nroCriterios; criterioAtual++){
-                // Retornaremos 1 se o campo atende ao critério buscado
-                if(VerificaCriterioBusca(&reg, criterios[criterioAtual].nomeDoCampo, criterios[criterioAtual].valorBuscado) != 1){
-                    atendeTodosCriterios = 0; // Falhou em um dos pares de criterios (filtro) passados
-                    break; // Descartamos
-                }
-            }
-
-            // Se passou pelas verificações, imprimimos na tela
-            if(atendeTodosCriterios == 1){
-                ImprimirRegistro(&reg);
-                registroEncontrado = 1; // Sinalizamos que encontramos um que atende ao filtro passado
-
-                if(BuscaPorID == 1){ // Caso o ID da busca (codEstacao) bater, não ficamos percorrendo os demais registro
-                    LiberarStringRegistro(&reg);
-                    return registroEncontrado; // Retornará 1, ou seja, foi encontrado
-                }
-            }
-        }
-        // Desaloco as strings alocadas pelo LerRegistroBIN
-        LiberarStringRegistro(&reg);
-    }
-
-    // Se chegar aqui retorará 0, ou seja, NÃO foi encontrado
-    return registroEncontrado;
-}
-
 /*Lê os pares de "campo" e "valor" solicitados na filtragem capturando a entrada com aspas 
 e salva isso em um vetor de struct de tamanho dimensionado pela quantidade de critérios passados*/
 void LerCriteriosBusca(CriterioBusca *criterios, int qtdCriterios){
@@ -325,6 +270,115 @@ int VerificaCriterioBusca(const Registro *registroDados, const char *nomeDoCampo
     return 0;
 }
 
+void AplicarUpdates(Registro *reg, CriterioBusca *updates, int nroUpdates){
+    for(int updt = 0; updt < nroUpdates; updt++){
+        const char *campo = updates[updt].nomeDoCampo;
+        const char *valor = updates[updt].valorBuscado;
+
+        int ehNulo = (strlen(valor) == 0); //LerCriterioBusca já converte NULO para ""
+
+        /*CAMPOS FIXOS
+        Se forem NULOS -1, SE NÃO convertermos a string para inteiro*/
+        if(strcmp(campo, "codEstacao") == 0){
+            reg->codEstacao = ehNulo ? -1 : atoi(valor);
+        }
+
+        else if(strcmp(campo, "codLinha") == 0){
+            reg->codLinha = ehNulo ? -1 : atoi(valor);
+        
+        }
+
+        else if(strcmp(campo, "codProxEstacao") == 0){
+            reg->codProxEstacao = ehNulo ? -1 : atoi(valor);
+        
+        }
+        
+        else if(strcmp(campo, "distProxEstacao") == 0){
+            reg->distProxEstacao = ehNulo ? -1 : atoi(valor);
+        
+        }
+        
+        else if(strcmp(campo, "codLinhaIntegra") == 0){
+            reg->codLinhaIntegra = ehNulo ? -1 : atoi(valor);
+        
+        }
+        
+        else if(strcmp(campo, "codEstIntegra") == 0){
+            reg->codEstIntegra = ehNulo ? -1 : atoi(valor);
+        
+        }
+
+        /* CAMPOS VARIÁVEIS
+        liberamos a string antiga, antes de alocarmos a nova*/
+        else if(strcmp(campo, "nomeEstacao") == 0){
+            free(reg->nomeEstacao);
+            if(ehNulo){ //caso seja nulo
+                reg->nomeEstacao = NULL;
+                reg->tamNomeEstacao = 0;
+            }
+            else { //não nulo
+                reg->nomeLinha = strdup(valor); // aloca e copia o novo valor
+                reg->tamNomeLinha = strlen(valor);
+            }
+        
+        }
+    }
+}
+
+int BuscaSequencial(FILE *arquivoBIN, int proxRRN, CriterioBusca *criterios, int nroCriterios){
+    int BuscaPorID = 0; // Flag de ID (codEstacao) para parar a busca quando for encotrado
+    for(int c = 0; c < nroCriterios; c++){ // Verificamos se a busca atual tem o campo codEstacao
+        if(strcmp(criterios[c].nomeDoCampo, "codEstacao") == 0){
+            BuscaPorID = 1;
+            break;
+        }
+    }
+
+    int registroEncontrado = 0; // Flag de controle ( 0 = false, 1 = true)
+    Registro reg;
+
+    // Posicionamos o ponteiro do arquivo para o ínicio dos dados (IGNORANDO O CABEÇALHO = 17 Bytes)
+    fseek(arquivoBIN, TAM_CABECALHO, SEEK_SET);
+
+    for(int rrnAtual = 0; rrnAtual < proxRRN; rrnAtual++){
+        // "Zera" os ponteiros para prevenir lixo da memoria na leitura
+        reg.nomeEstacao =NULL;
+        reg.nomeLinha = NULL;
+
+        // Preenche a struct com os dados lido do arquvio e verifica se não está removido
+        LerRegistroBIN(arquivoBIN, &reg);
+
+        // Ignoramos todos os registros inválidos
+        if(reg.removido != '1'){ // apenas uma segurança a mais para confirmar que NÃO ESTÁ REMOVIDO
+            int atendeTodosCriterios = 1; // Assumimos que registro serve (true), até que se prove o contrário
+
+            // Verifica o registro atual a partir dos criterios de busca que foram passados
+            for(int criterioAtual = 0; criterioAtual < nroCriterios; criterioAtual++){
+                // Retornaremos 1 se o campo atende ao critério buscado
+                if(VerificaCriterioBusca(&reg, criterios[criterioAtual].nomeDoCampo, criterios[criterioAtual].valorBuscado) != 1){
+                    atendeTodosCriterios = 0; // Falhou em um dos pares de criterios (filtro) passados
+                    break; // Descartamos
+                }
+            }
+
+            // Se passou pelas verificações, imprimimos na tela
+            if(atendeTodosCriterios == 1){
+                ImprimirRegistro(&reg);
+                registroEncontrado = 1; // Sinalizamos que encontramos um que atende ao filtro passado
+
+                if(BuscaPorID == 1){ // Caso o ID da busca (codEstacao) bater, não ficamos percorrendo os demais registro
+                    LiberarStringRegistro(&reg);
+                    return registroEncontrado; // Retornará 1, ou seja, foi encontrado
+                }
+            }
+        }
+        // Desaloco as strings alocadas pelo LerRegistroBIN
+        LiberarStringRegistro(&reg);
+    }
+
+    // Se chegar aqui retorará 0, ou seja, NÃO foi encontrado
+    return registroEncontrado;
+}
 
 /*Exibe os campos de um registro na tela, substituindo -1 ou NULL,
 pela palavra "NULO"*/

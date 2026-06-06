@@ -35,10 +35,11 @@
 
     void LiberarStringRegistro(Registro *registroDados);
 
-    int BuscaSequencial(FILE *arquivoBIN, int proxRRN, CriterioBusca *criterios, int nroCriterios);
-
     void LerCriteriosBusca(CriterioBusca *criterios, int qtdCriterios);
     int VerificaCriterioBusca(const Registro *registroDados, const char *nomeDoCampo, const char *valorBuscado);
+    void AplicarUpdates(Registro *reg, CriterioBusca *updates, int nroUpdates);
+
+    int BuscaSequencial(FILE *arquivoBIN, int proxRRN, CriterioBusca *criterios, int nroCriterios);
 
     void ImprimirRegistro(const Registro *registroDados);
     void MensagemErro();
