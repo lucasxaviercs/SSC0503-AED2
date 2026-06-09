@@ -12,8 +12,8 @@ void LerRegistroBIN(FILE *arquivoBIN, Registro *registroDados){
     // Checagem se o registro está marcado como removido ou não
     if(registroDados->removido == '1'){// se removido
         fseek(arquivoBIN, TAM_REGISTRO - espacoUtilizado, SEEK_CUR); // altera o cursor para o próximo registro
-        registroDados->nomeEstacao == NULL; // prevenção de lixo nos ponteiros
-        registroDados->nomeLinha == NULL;   // prevenção de lixo nos ponteiros
+        registroDados->nomeEstacao = NULL; // prevenção de lixo nos ponteiros
+        registroDados->nomeLinha = NULL;   // prevenção de lixo nos ponteiros
         return;
     }
     

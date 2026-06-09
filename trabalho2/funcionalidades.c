@@ -9,6 +9,7 @@ void CreateTable(char *arquivoEntrada, char *arquivoSaida){
     // Abortando funcionalidade caso ocorra erro na abertura do arquivo CSV
     if(arquivoCSV == NULL){
         MensagemErro();
+        fclose(arquivoCSV);
         return;
     }
 
@@ -275,6 +276,7 @@ void CriarIndex(char *arquivoDados, char *arquivoIndex){
         MensagemErro();
         fclose(arquivoDadosBIN);
         fclose(arquivoIndexBIN);
+        return;
     }
 
     int totalRegs = 0;
@@ -305,7 +307,10 @@ void CriarIndex(char *arquivoDados, char *arquivoIndex){
     ReescritaIndex(arquivoIndexBIN, registrosIndex, totalRegs);
 
     free(registrosIndex);
-    registrosIndex == NULL;
+    regDados.nomeEstacao = NULL;
+    regDados.nomeLinha = NULL;
+    registrosIndex = NULL;
+
     fclose(arquivoDadosBIN);
     fclose(arquivoIndexBIN);
 
@@ -421,13 +426,13 @@ void InsertInto(char *arquivoDados, char *arquivoIndex, int nroInsercoes){
 
     FILE *arquivoDadosBIN = fopen(arquivoDados, "rb+");
     if (arquivoDadosBIN == NULL) {
-        mensagemErro();
+        MensagemErro();
         return;
     }
 
     FILE *arquivoIndexBIN = fopen(arquivoIndex, "rb+");
     if (arquivoIndexBIN == NULL) {
-        mensagemErro();
+        MensagemErro();
         return;
     }
 
@@ -542,9 +547,8 @@ void InsertInto(char *arquivoDados, char *arquivoIndex, int nroInsercoes){
     ReescritaIndex(arquivoIndexBIN, registrosIndex, totalRegs);
     free(registrosIndex);
 
-    // reescreve o cabecalho dos arquivos marcando como consistente ao final da inserção
-    cabecalhoIndex.status = '1';
-    fwrite(&cabecalhoIndex, sizeof(IndexHeader), 1, arquivoIndexBIN);
+    // reescreve o cabecalho do arquivo de dados marcando como consistente ao final da inserção
+    // no arquivo de índices, isso já é feito pela ReescritaIndex
     cabecalho.status = '1';
     EscreverCabecalhoBIN(arquivoDadosBIN, &cabecalho);   
     
@@ -558,13 +562,13 @@ void InsertInto(char *arquivoDados, char *arquivoIndex, int nroInsercoes){
 void Delete(char *arquivoDados, char *arquivoIndex, int nroRemocoes){
     FILE *arquivoDadosBIN = fopen(arquivoDados, "rb+");
     if (arquivoDadosBIN == NULL) {
-        mensagemErro();
+        MensagemErro();
         return;
     }
 
     FILE *arquivoIndexBIN = fopen(arquivoIndex, "rb+");
     if (arquivoIndexBIN == NULL) {
-        mensagemErro();
+        MensagemErro();
         return;
     }
 
@@ -602,6 +606,11 @@ void Delete(char *arquivoDados, char *arquivoIndex, int nroRemocoes){
         fseek(arquivoDadosBIN, TAM_CABECALHO, SEEK_SET);
 
         for(int rrnAtual = 0; rrnAtual < cabecalho.proxRRN; rrnAtual++){
+            // reposiciona para o registro atual antes de ler
+            // isso é necessário porque no caso de remoção voltamos para atualizar o campo de removido, o que atrapalharia a leitura
+            long byteOffset = TAM_CABECALHO + (rrnAtual * TAM_REGISTRO);
+            fseek(arquivoDadosBIN, byteOffset, SEEK_SET); 
+
             Registro reg;
             reg.nomeEstacao = NULL;
             reg.nomeLinha = NULL;
@@ -633,7 +642,7 @@ void Delete(char *arquivoDados, char *arquivoIndex, int nroRemocoes){
                 fwrite(&reg.proximo, sizeof(int), 1, arquivoDadosBIN);
                 
                 cabecalho.nroEstacoes--; // atualiza o número de estações no cabeçalho
-                RemoverRegistroIndex(registrosIndex, totalRegs, reg.codEstacao);
+                RemoverRegistroIndex(&registrosIndex, &totalRegs, reg.codEstacao);
             }
 
             LiberarStringRegistro(&reg);

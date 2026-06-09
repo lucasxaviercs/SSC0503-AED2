@@ -18,7 +18,7 @@
     } IndexRegistro;
 
     // carrega o arquivo de índice em memória primária para uso
-    void CarregarIndex(FILE *arquivoIndex, IndexRegistro **registros, int *totalRegs);
+    void CarregarIndex(FILE *arquivoIndex, IndexRegistro **registros, int *totalRegs, Header *cabecalhoDados);
     // reescreve o arquivo de índice no disco após operações
     void ReescritaIndex(FILE *arquivoIndex, IndexRegistro *registros, int totalRegs);
 
