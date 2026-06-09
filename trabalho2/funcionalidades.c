@@ -239,7 +239,7 @@ void RecuperacaoRRN(char *arquivoEntrada, int RRN){
     fclose(arquivoBIN);
 }
 
-void CriarIndex(FILE *arquivoDados, FILE* arquivoIndex){
+void CriarIndex(char *arquivoDados, char *arquivoIndex){
     // abre o arquivo de dados para leitura, se deu erro aborta
     FILE *arquivoDadosBIN = fopen(arquivoDados, "rb");
     if (arquivoDadosBIN == NULL) {
@@ -455,7 +455,7 @@ void InsertInto(char *arquivoDados, char *arquivoIndex, int nroInsercoes){
 
     for(int i = 0; i < nroInsercoes; i++){
 
-        Registro novoRegistro;
+        Registro novo;
         novo.removido = '0';
         novo.proximo = -1;
 
@@ -464,7 +464,7 @@ void InsertInto(char *arquivoDados, char *arquivoIndex, int nroInsercoes){
         char bufferLeitura[100]; // buffer para armazenar as leituras feitas com ScanQuoteString
 
         ScanQuoteString(bufferLeitura);
-        if (bufStr[0] == '\0'){
+        if (bufferLeitura[0] == '\0'){
             novo.nomeEstacao = NULL;
             novo.tamNomeEstacao = 0;
         } else {
@@ -475,7 +475,7 @@ void InsertInto(char *arquivoDados, char *arquivoIndex, int nroInsercoes){
         scanf("%d", &novo.codLinha);
 
         ScanQuoteString(bufferLeitura);
-        if (bufStr[0] == '\0'){
+        if (bufferLeitura[0] == '\0'){
             novo.nomeLinha = NULL;
             novo.tamNomeLinha = 0;
         } else {
@@ -590,7 +590,7 @@ void Delete(char *arquivoDados, char *arquivoIndex, int nroRemocoes){
 
     IndexRegistro *registrosIndex = NULL;
     int totalRegs = 0;
-    CarregarIndex(arquivoIndexBIN, &registrosIndex, &totalRegs, cabecalho.nroEstacoes);
+    CarregarIndex(arquivoIndexBIN, &registrosIndex, &totalRegs);
 
     for (int i = 0; i < nroRemocoes; i++){
         int nroCriterios;
@@ -655,3 +655,111 @@ void Delete(char *arquivoDados, char *arquivoIndex, int nroRemocoes){
     BinarioNaTela(arquivoIndex);
 }
         
+void Update(char *arquivoDados, char *arquivoIndex, int nroAtualizacoes){
+    FILE *arquivoDadosBIN = fopen(arquivoDados, "rb+");
+    if(!arquivoDadosBIN){
+        MensagemErro();
+        return;
+    }
+
+    FILE *arquivoIndexBIN = fopen(arquivoIndex, "rb+");
+    if(!arquivoIndexBIN){
+        MensagemErro();
+        fclose(arquivoDadosBIN);
+        fclose(arquivoIndexBIN);
+        return;
+    }
+
+    Header cabecalho;
+    LerCabecalhoBIN(arquivoDadosBIN, &cabecalho);
+    if(cabecalho.status == '0'){
+        MensagemErro();
+        fclose(arquivoDadosBIN);
+        fclose(arquivoIndexBIN);
+        return;
+    }
+
+    // Marcamos ambos arquivos como inconsistente enquanto realizamos as operações
+    cabecalho.status = '0';
+    EscreverCabecalhoBIN(arquivoDadosBIN, &cabecalho);
+
+    IndexHeader cabecalhoIndex;
+    cabecalhoIndex.status = 0;
+    fseek(arquivoIndexBIN, 0, SEEK_SET);
+    fwrite(&cabecalhoIndex.status, sizeof(char), 1, arquivoIndexBIN);
+
+    // Carregamos o índice inteiro em memória primária
+    IndexRegistro *registrosIndex = NULL;
+    int totalRegsIndex = 0;
+    CarregarIndex(arquivoIndexBIN, &registrosIndex, &totalRegsIndex);
+
+    for(int op=0; op < nroAtualizacoes; op++){
+        // Lê o os critérios de busca
+        int m_nroCriterios;
+        if(scanf("%d", &m_nroCriterios) != 1) break;
+        CriterioBusca criteriosBusca[m_nroCriterios];
+        LerCriteriosBusca(criteriosBusca, m_nroCriterios);
+
+        // Lê os campos para atualizar
+        int p_nroUpdates;
+        if(scanf("%d", &p_nroUpdates) != 1) break;
+        CriterioBusca criteriosUpdates[p_nroUpdates];
+        LerCriteriosBusca(criteriosUpdates, p_nroUpdates);
+
+        for(int RRN_Atual = 0; RRN_Atual < cabecalho.proxRRN; RRN_Atual++){
+            // Calculamos o byteoffset antes de ler, para caso seja preciso reposicionar para escrever
+            long byteoffset = TAM_CABECALHO + (long) (RRN_Atual * TAM_REGISTRO);
+            fseek(arquivoDadosBIN, byteoffset, SEEK_SET);
+
+            Registro reg;
+            reg.nomeEstacao = NULL;
+            reg.nomeLinha = NULL;
+            LerRegistroBIN(arquivoDadosBIN, &reg);
+            if(reg.removido == '1'){
+                LiberarStringRegistro(&reg);
+                continue;
+            }
+
+            int atendeTodos = 1; //flag de controle de atender os critérios de busca
+            // Loop para verificação se o registro atual atende a todos os critérios de busca
+            for(int c = 0; c < m_nroCriterios; c++){
+                if(VerificaCriterioBusca(&reg, criteriosBusca[c].nomeDoCampo, criteriosBusca[c].valorBuscado) != 1){
+                    atendeTodos = 0;
+                    break;
+                }
+            }
+
+            if(atendeTodos == 1){
+                int codEstacaoAntiga = reg.codEstacao; //guardamos antes de alterar
+
+                //Aplicamos as atualizações em memória primária
+                AplicarUpdates(&reg, criteriosUpdates, p_nroUpdates);
+
+                //Reposicionamos o cursor p/ o início deste registro e sobreescrevemos
+                fseek(arquivoDadosBIN, byteoffset, SEEK_SET);
+                EscreverRegistroBIN(arquivoDadosBIN, &reg);
+
+                //Se houve alteração no ID (codEstacao), ajustamos o índice
+                if(reg.codEstacao != codEstacaoAntiga){
+                    RemoverRegistroIndex(&registrosIndex, &totalRegsIndex, codEstacaoAntiga);
+                    InserirRegistroIndex(&registrosIndex, reg.codEstacao, RRN_Atual, &totalRegsIndex);
+                }
+            }
+            LiberarStringRegistro(&reg);
+        }
+    }
+
+    //Reescrevemos o índice atualizado e alteramos o arquivo para consistente
+    ReescritaIndex(arquivoIndexBIN, registrosIndex, totalRegsIndex);
+    free(registrosIndex);
+    registrosIndex = NULL;
+
+    cabecalho.status = '1';
+    EscreverCabecalhoBIN(arquivoDadosBIN, &cabecalho);
+
+    fclose(arquivoDadosBIN);
+    fclose(arquivoIndexBIN);
+
+    BinarioNaTela(arquivoDados);
+    BinarioNaTela(arquivoIndex);
+}

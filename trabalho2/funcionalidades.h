@@ -5,15 +5,15 @@
     #include "index.h"
     #include "utils.h"
 
-    #define CREATE_TABLE             1
-    #define SELECT_FROM              2
-    #define SELECT_WHERE             3
-    #define RECUPERACAO_RRN          4
-    #define CREATE_INDEX             5
-    #define SELECT_WHERE_USING_INDEX 6
-    #define DELETE                   7
-    #define INSERT_INTO              8
-    #define UPDATE                   9
+    #define CREATE_TABLE               1
+    #define SELECT_FROM                2
+    #define SELECT_WHERE               3
+    #define RECUPERACAO_RRN            4
+    #define CREATE_INDEX               5
+    #define SELECT_WHERE_USING_INDEX   6
+    #define DELETE                     7
+    #define INSERT_INTO                8
+    #define UPDATE                     9
 
 
     void CreateTable(char *arquivoEntrada, char *arquivoSaida);
@@ -22,7 +22,7 @@
     void RecuperacaoRRN(char *arquivoEntrada, int RRN);
     
     // cria o arquivo de índice a partir do arquivo de dados, usando codEstacao para indexar
-    void CriarIndex(FILE *arquivoDados, FILE* arquivoIndex);
+    void CriarIndex(char *arquivoDados, char *arquivoIndex);
 
     // Busca com índice primário/ chave (codEstação) ou sequencial (demais campos, como no SelectWhere)
     void SelectWhereIndex(char *arquivoDados, char *arquivoIndex, int nroBuscas);
@@ -32,4 +32,6 @@
 
     // Insere novos registros no arquivo de dados e atualiza o índice
     void InsertInto(char *arquivoDados, char *arquivoIndex, int nroInsercoes);
-    
+
+    // Atualiza os registro com base nos filtros de buscas aplicados
+    void Update(char *arquivoDados, char *arquivoIndex, int nroAtualizacoes);
