@@ -29,6 +29,7 @@ int main(int argc, char *argv[]){
             SelectWhere(arquivoEntrada, nroBuscas);
             break;
         }
+
         case RECUPERACAO_RRN:
         {
             int RRN;
@@ -36,13 +37,19 @@ int main(int argc, char *argv[]){
             RecuperacaoRRN(arquivoEntrada, RRN);
             break;
         }
+
         case CREATE_INDEX:
             scanf("%s %s", arquivoEntrada, arquivoSaida);
             CriarIndex(arquivoEntrada, arquivoSaida);
             break;
-        
+
         case SELECT_WHERE_USING_INDEX:
+        {
+            int nroBuscas;
+            scanf("%s %s %d", arquivoEntrada, arquivoSaida, &nroBuscas);
+            SelectWhereIndex(arquivoEntrada, arquivoSaida, nroBuscas);
             break;
+        }
 
         case DELETE:
         {   
@@ -51,6 +58,7 @@ int main(int argc, char *argv[]){
             Delete(arquivoEntrada, arquivoSaida, nroRemocoes);
             break;
         }
+
         case INSERT_INTO:
         {
             int nroInsercoes;
@@ -58,8 +66,14 @@ int main(int argc, char *argv[]){
             InsertInto(arquivoEntrada, arquivoSaida, nroInsercoes);
             break;
         }
+
         case UPDATE:
+        {
+            int nroUpdates;
+            scanf("%s %s %d", arquivoEntrada, arquivoSaida, &nroUpdates);
+            Update(arquivoEntrada, arquivoSaida, nroUpdates);
             break;
+        }
         
         default:
             printf("Funcionalidade inválida.\n");
