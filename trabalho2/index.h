@@ -23,9 +23,9 @@
     void ReescritaIndex(FILE *arquivoIndex, IndexRegistro *registros, int totalRegs);
 
     // operações de busca, inserção e remoção no índice
-    int BuscarRegistroIndex(FILE *arquivoIndex, int codEstacao);
+    int BuscarRegistroIndex(IndexRegistro *registros, int totalRegs, int codEstacao);
     void InserirRegistroIndex(IndexRegistro **registros, int codEstacao, int RRN, int *totalRegs);
-    void RemoverRegistroIndex(FILE *arquivoIndex, int codEstacao);
+    void RemoverRegistroIndex(IndexRegistro **registros, int *totalRegs, int codEstacao);
 
     // função auxiliar para ler um registro do arquivo de índices para struct
     void LerRegistroIndex(FILE *arquivoIndex, IndexRegistro *registro);
