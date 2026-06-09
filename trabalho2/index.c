@@ -1,6 +1,6 @@
 #include "index.h"
 
-void CarregarIndex(FILE *arquivoIndex, IndexRegistro **registros, int *totalRegs) {
+void CarregarIndex(FILE *arquivoIndex, IndexRegistro **registros, int *totalRegs, Header *cabecalhoDados) {
     if (arquivoIndex == NULL) return;
 
     IndexHeader cabecalhoIndex;
@@ -13,7 +13,7 @@ void CarregarIndex(FILE *arquivoIndex, IndexRegistro **registros, int *totalRegs
     }
 
     *totalRegs = cabecalhoDados->nroEstacoes;
-    *registros = (IndexRegistro *)malloc(*totalRegs * sizeof(IndexRegistro));
+    *registros = (IndexRegistro *)malloc((*totalRegs) * sizeof(IndexRegistro));
 
     for (int i = 0; i < *totalRegs; i++) {
         LerRegistroIndex(arquivoIndex, &(*registros)[i]);

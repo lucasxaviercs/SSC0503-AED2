@@ -376,7 +376,7 @@ void SelectWhereIndex(char *arquivoDados, char *arquivoIndex, int nroBuscas){
 
         if(usarIndice == 1){
             if(!indiceCarregado){
-                CarregarIndex(arquivoIndexBIN, &registrosIndex, &totalRegsIndex);
+                CarregarIndex(arquivoIndexBIN, &registrosIndex, &totalRegsIndex, cabecalhoDados);
                 indiceCarregado = 1;
             }
 
@@ -436,9 +436,9 @@ void InsertInto(char *arquivoDados, char *arquivoIndex, int nroInsercoes){
         return;
     }
 
-    Header cabecalho;
-    LerCabecalhoBIN(arquivoDadosBIN, &cabecalho);
-    if (cabecalho.status == '0') {
+    Header cabecalhoDados;
+    LerCabecalhoBIN(arquivoDadosBIN, &cabecalhoDados);
+    if (cabecalhoDados.status == '0') {
         MensagemErro();
         fclose(arquivoDadosBIN);
         fclose(arquivoIndexBIN);
@@ -450,13 +450,13 @@ void InsertInto(char *arquivoDados, char *arquivoIndex, int nroInsercoes){
     cabecalhoIndex.status = '0';
     fwrite(&cabecalhoIndex, sizeof(IndexHeader), 1, arquivoIndexBIN);
 
-    cabecalho.status = '0';
-    EscreverCabecalhoBIN(arquivoDadosBIN, &cabecalho);
+    cabecalhoDados.status = '0';
+    EscreverCabecalhoBIN(arquivoDadosBIN, &cabecalhoDados);
 
     // carregar index em RAM
     IndexRegistro *registrosIndex = NULL;
     int totalRegs = 0;
-    CarregarIndex(arquivoIndexBIN, &registrosIndex, &totalRegs);
+    CarregarIndex(arquivoIndexBIN, &registrosIndex, &totalRegs, &cabecalhoDados);
 
     for(int i = 0; i < nroInsercoes; i++){
 
@@ -518,8 +518,8 @@ void InsertInto(char *arquivoDados, char *arquivoIndex, int nroInsercoes){
         }
 
         int rrnNovoRegistro;
-        if (cabecalho.topo != -1) {
-            rrnNovoRegistro = cabecalho.topo;
+        if (cabecalhoDados.topo != -1) {
+            rrnNovoRegistro = cabecalhoDados.topo;
 
             int byteoffset = TAM_CABECALHO + (rrnNovoRegistro * TAM_REGISTRO);
             fseek(arquivoDadosBIN, byteoffset, SEEK_SET);
@@ -529,11 +529,11 @@ void InsertInto(char *arquivoDados, char *arquivoIndex, int nroInsercoes){
             removido.nomeLinha = NULL;
             LerRegistroBIN(arquivoDadosBIN, &removido);
 
-            cabecalho.topo = removido.proximo; // atualiza o topo com o último removido da pilha de removidos
+            cabecalhoDados.topo = removido.proximo; // atualiza o topo com o último removido da pilha de removidos
             LiberarStringRegistro(&removido);
         } else {
-            rrnNovoRegistro = cabecalho.proxRRN;
-            cabecalho.proxRRN++;
+            rrnNovoRegistro = cabecalhoDados.proxRRN;
+            cabecalhoDados.proxRRN++;
         }
 
         int byteoffset = TAM_CABECALHO + (rrnNovoRegistro * TAM_REGISTRO);
@@ -549,8 +549,8 @@ void InsertInto(char *arquivoDados, char *arquivoIndex, int nroInsercoes){
 
     // reescreve o cabecalho do arquivo de dados marcando como consistente ao final da inserção
     // no arquivo de índices, isso já é feito pela ReescritaIndex
-    cabecalho.status = '1';
-    EscreverCabecalhoBIN(arquivoDadosBIN, &cabecalho);   
+    cabecalhoDados.status = '1';
+    EscreverCabecalhoBIN(arquivoDadosBIN, &cabecalhoDados);   
     
     fclose(arquivoDadosBIN);
     fclose(arquivoIndexBIN);
@@ -572,10 +572,10 @@ void Delete(char *arquivoDados, char *arquivoIndex, int nroRemocoes){
         return;
     }
 
-    Header cabecalho;
-    LerCabecalhoBIN(arquivoDadosBIN, &cabecalho);
+    Header cabecalhoDados;
+    LerCabecalhoBIN(arquivoDadosBIN, &cabecalhoDados);
     // checagem da consistência do arquivo de dados antes de iniciar o delete
-    if (cabecalho.status == '0') {
+    if (cabecalhoDados.status == '0') {
         MensagemErro();
         fclose(arquivoDadosBIN);
         fclose(arquivoIndexBIN);
@@ -594,7 +594,7 @@ void Delete(char *arquivoDados, char *arquivoIndex, int nroRemocoes){
 
     IndexRegistro *registrosIndex = NULL;
     int totalRegs = 0;
-    CarregarIndex(arquivoIndexBIN, &registrosIndex, &totalRegs);
+    CarregarIndex(arquivoIndexBIN, &registrosIndex, &totalRegs, &cabecalhoDados);
 
     for (int i = 0; i < nroRemocoes; i++){
         int nroCriterios;
@@ -605,7 +605,7 @@ void Delete(char *arquivoDados, char *arquivoIndex, int nroRemocoes){
 
         fseek(arquivoDadosBIN, TAM_CABECALHO, SEEK_SET);
 
-        for(int rrnAtual = 0; rrnAtual < cabecalho.proxRRN; rrnAtual++){
+        for(int rrnAtual = 0; rrnAtual < cabecalhoDados.proxRRN; rrnAtual++){
             // reposiciona para o registro atual antes de ler
             // isso é necessário porque no caso de remoção voltamos para atualizar o campo de removido, o que atrapalharia a leitura
             long byteOffset = TAM_CABECALHO + (rrnAtual * TAM_REGISTRO);
@@ -632,8 +632,8 @@ void Delete(char *arquivoDados, char *arquivoIndex, int nroRemocoes){
             if (atendeTodos == 1){
                 // se atendeu os critérios, marca como removido e empilha
                 reg.removido = '1';
-                reg.proximo = cabecalho.topo; 
-                cabecalho.topo = rrnAtual;
+                reg.proximo = cabecalhoDados.topo; 
+                cabecalhoDados.topo = rrnAtual;
 
                 int byteOffset = TAM_CABECALHO + (rrnAtual * TAM_REGISTRO);
                 fseek(arquivoDadosBIN, byteOffset, SEEK_SET);
@@ -641,7 +641,7 @@ void Delete(char *arquivoDados, char *arquivoIndex, int nroRemocoes){
                 fwrite(&reg.removido, sizeof(char), 1, arquivoDadosBIN);
                 fwrite(&reg.proximo, sizeof(int), 1, arquivoDadosBIN);
                 
-                cabecalho.nroEstacoes--; // atualiza o número de estações no cabeçalho
+                cabecalhoDados.nroEstacoes--; // atualiza o número de estações no cabeçalho
                 RemoverRegistroIndex(&registrosIndex, &totalRegs, reg.codEstacao);
             }
 
@@ -654,8 +654,8 @@ void Delete(char *arquivoDados, char *arquivoIndex, int nroRemocoes){
     ReescritaIndex(arquivoIndexBIN, registrosIndex, totalRegs);
     free(registrosIndex);
 
-    cabecalho.status = '1';
-    EscreverCabecalhoBIN(arquivoDadosBIN, &cabecalho);
+    cabecalhoDados.status = '1';
+    EscreverCabecalhoBIN(arquivoDadosBIN, &cabecalhoDados);
 
     fclose(arquivoDadosBIN);
     fclose(arquivoIndexBIN);
