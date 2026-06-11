@@ -4,7 +4,9 @@
     #include <stdlib.h>
     #include <string.h>
     #include <ctype.h>
-
+    #include "header.h"
+    #include "utils.h"
+    
     #define TAM_INDEX_HEADER 1
     #define TAM_INDEX_REGISTRO 8
   
@@ -34,6 +36,9 @@
 
     // realiza a leitura da estrutura de cabeçalho dos índices
     void LerCabecalhoIndex(FILE *arquivoIndex, IndexHeader *cabecalhoIndex);
+
+    // escreve a estrutura do cabeçalho do índice, reposicionando o cursor no ínicio do arquivo com fseek()
+    void EscreverCabecalhoIndex(FILE *arquivoIndex, IndexHeader *cabecalhoIndex);
 
     // função auxiliar para o uso do quicksort da stdlib
     int CompararIndexRegistro(const void *A, const void *B);

@@ -1,71 +1,15 @@
 #include "utils.h"
 
-#define SEPARADOR_CAMPOS ","
 
-        /*Lê um campo de tamanho fixo separado por vírgula no CSV.
-    Retornando o valor numérico correspondente ao campo para o registro
-    ou -1 para valores vazios ou "NULO"*/ 
-    static int LerCampoFixo(char **linha){
-        char *campo = strsep(linha, SEPARADOR_CAMPOS);
-
-        // Os valores de campos nulos devem ser representados pelo valor -1
-        if(campo == NULL || campo[0] == '\0' || strcmp(campo, "NULO") == 0) return -1;
-
-        return (int)strtol(campo, NULL, 10);
+/*Lê e descarta a primeira linha do arquivo CSV que é apenas os nomes das colunas da tabela*/
+void IgnorarLinhaZeroCSV(FILE *arquivoCSV){
+    char buffer[256];
+    if(fgets(buffer, 256, arquivoCSV) == NULL){
+        // MENSAGEM EXIGIDA quando houver falha no processamento de algum arquivo
+        MensagemErro();
+        exit(1);
     }
-
-    /*Lê um campo de tamanho variável que é separado por vírgula no CSV,
-    alocando a memória necessária. Retornando um ponteiro para a string
-    ou NULL para quando aquele campo estiver vazio ou NULO*/
-    static char *LerCampoVariavel(char **linha){
-        char *campo = strsep(linha, SEPARADOR_CAMPOS);
-
-        if(campo == NULL || campo[0] == '\0' || strcmp(campo, "NULO") == 0) return NULL;
-
-        char *nome = malloc( (strlen(campo) + 1) * sizeof(char) );
-        strcpy(nome, campo);
-        return nome;
-    }
-
-    /*Registra o indicador de tamanho e a string em sequência no arquivo binário.
-    Retornando a quantidade total de bytes ocupados, para facilitar na função de preencher
-    com lixo o arquivo binário*/
-    static int EscreverStringVariavelBIN(FILE *arquivoBIN, int tamanho, const char *string){
-        int espacoUtilizado = 0;
-        
-        // Escreve o indicador de tamanho (4 bytes) primeiro
-        fwrite(&tamanho, sizeof(int), 1, arquivoBIN);
-        espacoUtilizado += sizeof(int);
-        
-        // Se o tamanho for maior que 0, escreve a string (sem o '\0')
-        if (tamanho > 0 && string != NULL) {
-            fwrite(string, sizeof(char), tamanho, arquivoBIN);
-            espacoUtilizado += tamanho;
-        }
-        
-        return espacoUtilizado;
-    }
-
-    /*Caso ainda há bytes restantes do TAM_REGISTRO (80 bytes), preenche com lixo '$'
-    diretamente no arquivo para completar os 80 bytes.*/
-    static void PreencherComLixoBIN(FILE *arquivoBIN, int espacoUtilizado, int tamanhoTotal){
-        char lixo = '$';
-        int bytesRestantes = tamanhoTotal - espacoUtilizado;
-        
-        for (int i = 0; i < bytesRestantes; i++){
-            fwrite(&lixo, sizeof(char), 1, arquivoBIN);
-        }
-    }
-
-    /*Lê e descarta a primeira linha do arquivo CSV que é apenas os nomes das colunas da tabela*/
-    void IgnorarLinhaZeroCSV(FILE *arquivoCSV){
-        char buffer[256];
-        if(fgets(buffer, 256, arquivoCSV) == NULL){
-            // MENSAGEM EXIGIDA quando houver falha no processamento de algum arquivo
-            MensagemErro();
-            exit(1);
-        }
-    }
+}
 
 /*Cria e prepara o array de armazenamento de nomes de estações únicas.
 Retornando o endereço dessa nova lista na memória*/
@@ -321,8 +265,20 @@ void AplicarUpdates(Registro *reg, CriterioBusca *updates, int nroUpdates){
                 reg->nomeEstacao = strdup(valor); // aloca e copia o novo valor
                 reg->tamNomeEstacao = strlen(valor);
             }
-        
         }
+
+        else if(strcmp(campo, "nomeLinha") == 0){
+            free(reg->nomeLinha);
+            if(ehNulo){ //caso seja nulo
+                reg->nomeLinha = NULL;
+                reg->tamNomeLinha = 0;
+            }
+            else { //não nulo
+                reg->nomeLinha = strdup(valor); // aloca e copia o novo valor
+                reg->tamNomeLinha = strlen(valor);
+            }
+        }
+        
     }
 }
 

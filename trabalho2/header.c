@@ -1,5 +1,6 @@
 #include "header.h"
 
+
 /*Inicializa a struct do cabeçalho na memória com valores inicias definido nas instruções do trabalho.
 Retornando o endereço de memória reservado para a struct*/
 Header *InicializarCabecalho(){

@@ -1,5 +1,64 @@
 #include "registro.h"
 
+
+#define SEPARADOR_CAMPOS ","
+
+/*Lê um campo de tamanho fixo separado por vírgula no CSV.
+Retornando o valor numérico correspondente ao campo para o registro
+ou -1 para valores vazios ou "NULO"*/ 
+static int LerCampoFixo(char **linha){
+    char *campo = strsep(linha, SEPARADOR_CAMPOS);
+
+    // Os valores de campos nulos devem ser representados pelo valor -1
+    if(campo == NULL || campo[0] == '\0' || strcmp(campo, "NULO") == 0) return -1;
+
+    return (int)strtol(campo, NULL, 10);
+}
+
+/*Lê um campo de tamanho variável que é separado por vírgula no CSV,
+alocando a memória necessária. Retornando um ponteiro para a string
+ou NULL para quando aquele campo estiver vazio ou NULO*/
+static char *LerCampoVariavel(char **linha){
+    char *campo = strsep(linha, SEPARADOR_CAMPOS);
+
+    if(campo == NULL || campo[0] == '\0' || strcmp(campo, "NULO") == 0) return NULL;
+
+    char *nome = malloc( (strlen(campo) + 1) * sizeof(char) );
+    strcpy(nome, campo);
+    return nome;
+}
+
+/*Registra o indicador de tamanho e a string em sequência no arquivo binário.
+Retornando a quantidade total de bytes ocupados, para facilitar na função de preencher
+com lixo o arquivo binário*/
+static int EscreverStringVariavelBIN(FILE *arquivoBIN, int tamanho, const char *string){
+    int espacoUtilizado = 0;
+        
+    // Escreve o indicador de tamanho (4 bytes) primeiro
+    fwrite(&tamanho, sizeof(int), 1, arquivoBIN);
+    espacoUtilizado += sizeof(int);
+        
+    // Se o tamanho for maior que 0, escreve a string (sem o '\0')
+    if (tamanho > 0 && string != NULL) {
+        fwrite(string, sizeof(char), tamanho, arquivoBIN);
+        espacoUtilizado += tamanho;
+    }
+        
+    return espacoUtilizado;
+}
+
+/*Caso ainda há bytes restantes do TAM_REGISTRO (80 bytes), preenche com lixo '$'
+diretamente no arquivo para completar os 80 bytes.*/
+static void PreencherComLixoBIN(FILE *arquivoBIN, int espacoUtilizado, int tamanhoTotal){
+    char lixo = '$';
+    int bytesRestantes = tamanhoTotal - espacoUtilizado;
+        
+    for (int i = 0; i < bytesRestantes; i++){
+        fwrite(&lixo, sizeof(char), 1, arquivoBIN);
+    }
+}
+
+
 /*Lê sequencialmente os 80 bytes de um registro do arquivo e aloca suas strings por meio do fread.
 Preenchendo os dados na struct pelo endereço de memória passado como argumento na chamada da função*/
 void LerRegistroBIN(FILE *arquivoBIN, Registro *registroDados){
@@ -11,6 +70,13 @@ void LerRegistroBIN(FILE *arquivoBIN, Registro *registroDados){
     espacoUtilizado += sizeof(char);
     // Checagem se o registro está marcado como removido ou não
     if(registroDados->removido == '1'){// se removido
+        // Mesmo quando estiver removido, é preciso
+        // guardar o número do próximo registro para não haver 
+        // quebra da lógica do topo da pilha
+        fread(&registroDados->proximo, sizeof(int), 1, arquivoBIN);
+        espacoUtilizado += sizeof(int);
+
+        // Pula o que sobrou de bytes
         fseek(arquivoBIN, TAM_REGISTRO - espacoUtilizado, SEEK_CUR); // altera o cursor para o próximo registro
         registroDados->nomeEstacao = NULL; // prevenção de lixo nos ponteiros
         registroDados->nomeLinha = NULL;   // prevenção de lixo nos ponteiros

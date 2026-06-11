@@ -1,5 +1,6 @@
 #include "index.h"
 
+
 void CarregarIndex(FILE *arquivoIndex, IndexRegistro **registros, int *totalRegs, Header *cabecalhoDados) {
     if (arquivoIndex == NULL) return;
 
@@ -8,7 +9,7 @@ void CarregarIndex(FILE *arquivoIndex, IndexRegistro **registros, int *totalRegs
     fread(&cabecalhoIndex, sizeof(IndexHeader), 1, arquivoIndex);
 
     if (cabecalhoIndex.status == '0') {
-        mensagemErro();
+        MensagemErro();
         return;
     }
 
@@ -42,7 +43,7 @@ int BuscarRegistroIndex(IndexRegistro *registros, int totalRegs, int codEstacao)
         int meio = esq + (dir - esq)/2;
 
         if (registros[meio].codEstacao == codEstacao) {
-            return registros[meio].RRN;
+            return meio;
         } else if (registros[meio].codEstacao < codEstacao) {
             esq = meio + 1;
         } else {
@@ -68,7 +69,7 @@ void InserirRegistroIndex(IndexRegistro **registros, int codEstacao, int RRN, in
 }
 
 void RemoverRegistroIndex(IndexRegistro **registros, int *totalRegs, int codEstacao) {
-    int pos = BuscarRegistroIndex(registros, *totalRegs, codEstacao);
+    int pos = BuscarRegistroIndex(*registros, *totalRegs, codEstacao);
     if (pos == -1) return;
 
     for (int i = pos; i < *totalRegs - 1; i++) {
@@ -92,6 +93,11 @@ void EscreverRegistroIndex(FILE *arquivoIndex, IndexRegistro *registro) {
 void LerCabecalhoIndex(FILE *arquivoIndex, IndexHeader *cabecalhoIndex){
     fseek(arquivoIndex, 0, SEEK_SET);
     fread(&cabecalhoIndex->status, sizeof(char), 1, arquivoIndex);
+}
+
+void EscreverCabecalhoIndex(FILE *arquivoIndex, IndexHeader *cabecalhoIndex){
+    fseek(arquivoIndex, 0, SEEK_SET);
+    fwrite(&cabecalhoIndex->status, sizeof(char), 1, arquivoIndex);
 }
 
 int CompararIndexRegistro(const void *A, const void *B){

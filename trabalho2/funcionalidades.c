@@ -1,5 +1,6 @@
 #include "funcionalidades.h"
 
+
 /*Lê os registros de um arquivo CSV e constrói a "tabela" no formato de um arquivo binário.
 Tendo todo o controle de inicializar, contabilizar, atualizar os dados do cabeçalho e dos registros
 para realizar a gravação no arquivo binário*/
@@ -91,16 +92,16 @@ void SelectFrom(char *arquivoEntrada){
     }    
 
     // Leitura do cabecalho do arquivo binário
-    Header cabecalho;
-    LerCabecalhoBIN(arquivoBIN, &cabecalho);
+    Header cabecalhoDados;
+    LerCabecalhoBIN(arquivoBIN, &cabecalhoDados);
 
-    if(cabecalho.status == '0'){ //arquivo inconsistente 
+    if(cabecalhoDados.status == '0'){ //arquivo inconsistente 
         MensagemErro();
         fclose(arquivoBIN);
         return;
     }
 
-    if(cabecalho.proxRRN == 0){ // não há nenhum dado gravado, apenas o arquivo foi criado
+    if(cabecalhoDados.proxRRN == 0){ // não há nenhum dado gravado, apenas o arquivo foi criado
         MensagemRegistroNaoEncontrado();
         fclose(arquivoBIN);
         return;
@@ -110,7 +111,7 @@ void SelectFrom(char *arquivoEntrada){
     Registro registroDados;
 
     // LOOP PARA PROCESSAR OS DADOS DO REGISTRO
-    for(int i = 0; i < cabecalho.proxRRN; i++){
+    for(int i = 0; i < cabecalhoDados.proxRRN; i++){
 
         // Fazemos a leitura do registro no arquivo (disco), salvamos na RAM
         // e fazemos a verificação se o registro está removido ou não
@@ -148,10 +149,10 @@ void SelectWhere(char *arquivoEntrada, int nroBuscas){
     }    
 
     // Leitura do cabecalho do arquivo binário
-    Header cabecalho;
-    LerCabecalhoBIN(arquivoBIN, &cabecalho); // Para sabermos o status e o proxRRN
+    Header cabecalhoDados;
+    LerCabecalhoBIN(arquivoBIN, &cabecalhoDados); // Para sabermos o status e o proxRRN
 
-    if(cabecalho.status == '0'){ //arquivo inconsistente 
+    if(cabecalhoDados.status == '0'){ //arquivo inconsistente 
         MensagemErro();
         fclose(arquivoBIN);
         return;
@@ -172,7 +173,7 @@ void SelectWhere(char *arquivoEntrada, int nroBuscas){
 
         // Se for encontrado = 1
         // Se NÃO for encontrado = 0
-        int encontrado = BuscaSequencial(arquivoBIN, cabecalho.proxRRN, criterios, m_nroCriterios);
+        int encontrado = BuscaSequencial(arquivoBIN, cabecalhoDados.proxRRN, criterios, m_nroCriterios);
 
         // Passei por todo o arquivo e a flag não se alterou, continuou 0, avisa o usuário que o registro não foi encontrado
         if(encontrado == 0){
@@ -198,18 +199,18 @@ void RecuperacaoRRN(char *arquivoEntrada, int RRN){
     }
 
     // Leitura do cabeçalho para obter o próximo RRN disponível
-    Header cabecalho;
-    LerCabecalhoBIN(arquivoBIN, &cabecalho);
+    Header cabecalhoDados;
+    LerCabecalhoBIN(arquivoBIN, &cabecalhoDados);
 
     // Verificação se o arquivo está consistente
-    if(cabecalho.status == '0'){
+    if(cabecalhoDados.status == '0'){
         MensagemErro();
         fclose(arquivoBIN);
         return;
     }
 
     // Se o RRN for inválido (negativo ou além dos registros existentes), aborta
-    if(RRN < 0 || RRN >= cabecalho.proxRRN){
+    if(RRN < 0 || RRN >= cabecalhoDados.proxRRN){
         MensagemRegistroNaoEncontrado();
         fclose(arquivoBIN);
         return;
@@ -285,14 +286,14 @@ void CriarIndex(char *arquivoDados, char *arquivoIndex){
 
     fseek(arquivoDadosBIN, TAM_CABECALHO, SEEK_SET);
     for(int i = 0; i < cabecalhoDados.proxRRN; i++){
-        regDados.nomeEstacao == NULL;
-        regDados.nomeLinha == NULL;
+        regDados.nomeEstacao = NULL;
+        regDados.nomeLinha = NULL;
 
         //Leitura total dos dados em disco, para colocá-los em RAM
         LerRegistroBIN(arquivoDadosBIN, &regDados);
 
         //Se o registro NÃO estiver removido, então entra no índice
-        if(regDados.removido != 1){
+        if(regDados.removido != '1'){
             registrosIndex[totalRegs].codEstacao = regDados.codEstacao;
             registrosIndex[totalRegs].RRN = i;
             totalRegs++;
@@ -376,36 +377,37 @@ void SelectWhereIndex(char *arquivoDados, char *arquivoIndex, int nroBuscas){
 
         if(usarIndice == 1){
             if(!indiceCarregado){
-                CarregarIndex(arquivoIndexBIN, &registrosIndex, &totalRegsIndex, cabecalhoDados);
+                CarregarIndex(arquivoIndexBIN, &registrosIndex, &totalRegsIndex, &cabecalhoDados);
                 indiceCarregado = 1;
             }
 
-            // busca bin no índice para obter o RRN
-            int RRN = BuscarRegistroIndex(registrosIndex, totalRegsIndex, valorCodEstacao);
-            if(RRN != -1){
+            // busca bin no índice para obter o a posição no vetor
+            int posVetor = BuscarRegistroIndex(registrosIndex, totalRegsIndex, valorCodEstacao);
+            if(posVetor != -1){
+                int RRN = registrosIndex[posVetor].RRN;
                 long byteoffset = TAM_CABECALHO + ( (long) RRN * TAM_REGISTRO );
                 fseek(arquivoDadosBIN, byteoffset, SEEK_SET);
 
-                Registro reg;
-                reg.nomeEstacao = NULL;
-                reg.nomeLinha = NULL;
-                LerRegistroBIN(arquivoDadosBIN, &reg);
+                Registro regDados;
+                regDados.nomeEstacao = NULL;
+                regDados.nomeLinha = NULL;
+                LerRegistroBIN(arquivoDadosBIN, &regDados);
 
-                if(reg.removido != '1'){
+                if(regDados.removido != '1'){
                     // verificamos os demais critérios além do codEstacao
                     int atendeTodosCriterios = 1;
                     for(int criterioAtual = 0; criterioAtual < m_nroCriterios; criterioAtual++){
-                        if(VerificaCriterioBusca(&reg, criterios[criterioAtual].nomeDoCampo, criterios[criterioAtual].valorBuscado) != 1){
+                        if(VerificaCriterioBusca(&regDados, criterios[criterioAtual].nomeDoCampo, criterios[criterioAtual].valorBuscado) != 1){
                             atendeTodosCriterios = 0;
                             break;
                         }
                     }
                     if(atendeTodosCriterios){
-                        ImprimirRegistro(&reg);
+                        ImprimirRegistro(&regDados);
                         registroEncontrado = 1;
                     }
                 }
-                LiberarStringRegistro(&reg);
+                LiberarStringRegistro(&regDados);
             }
         }
         else{ // caso nao possua codEstacao (id), realizaremos a BuscaSequencial
@@ -433,30 +435,36 @@ void InsertInto(char *arquivoDados, char *arquivoIndex, int nroInsercoes){
     FILE *arquivoIndexBIN = fopen(arquivoIndex, "rb+");
     if (arquivoIndexBIN == NULL) {
         MensagemErro();
+        fclose(arquivoDadosBIN);
         return;
     }
 
+    // Lemos os dois cabeçalhos primeiro
     Header cabecalhoDados;
     LerCabecalhoBIN(arquivoDadosBIN, &cabecalhoDados);
-    if (cabecalhoDados.status == '0') {
+
+    IndexHeader cabecalhoIndex;
+    LerCabecalhoIndex(arquivoIndexBIN, &cabecalhoIndex);
+
+    // Verificamos a consitência de ambos
+    if(cabecalhoDados.status == '0' || cabecalhoIndex.status == '0'){
         MensagemErro();
         fclose(arquivoDadosBIN);
         fclose(arquivoIndexBIN);
         return;
     }
 
-    // marcar como inconsistente
-    IndexHeader cabecalhoIndex;
-    cabecalhoIndex.status = '0';
-    fwrite(&cabecalhoIndex, sizeof(IndexHeader), 1, arquivoIndexBIN);
-
-    cabecalhoDados.status = '0';
-    EscreverCabecalhoBIN(arquivoDadosBIN, &cabecalhoDados);
-
-    // carregar index em RAM
+    // Carregamos o índice inteiro em memória primária (ENQUANTO ELE AINDA É VALIDO '1')
     IndexRegistro *registrosIndex = NULL;
     int totalRegs = 0;
     CarregarIndex(arquivoIndexBIN, &registrosIndex, &totalRegs, &cabecalhoDados);
+
+    // Marcamos ambos arquivos como inconsistente no disco enquanto realizamos as operações
+    cabecalhoDados.status = '0';
+    EscreverCabecalhoBIN(arquivoDadosBIN, &cabecalhoDados);
+
+    cabecalhoIndex.status = '0';
+    EscreverCabecalhoIndex(arquivoIndexBIN, &cabecalhoIndex);
 
     for(int i = 0; i < nroInsercoes; i++){
 
@@ -569,32 +577,36 @@ void Delete(char *arquivoDados, char *arquivoIndex, int nroRemocoes){
     FILE *arquivoIndexBIN = fopen(arquivoIndex, "rb+");
     if (arquivoIndexBIN == NULL) {
         MensagemErro();
+        fclose(arquivoDadosBIN);
         return;
     }
 
+    // Lemos os dois cabeçalhos primeiro
     Header cabecalhoDados;
     LerCabecalhoBIN(arquivoDadosBIN, &cabecalhoDados);
-    // checagem da consistência do arquivo de dados antes de iniciar o delete
-    if (cabecalhoDados.status == '0') {
+
+    IndexHeader cabecalhoIndex;
+    LerCabecalhoIndex(arquivoIndexBIN, &cabecalhoIndex);
+
+    // Verificamos a consitência de ambos
+    if(cabecalhoDados.status == '0' || cabecalhoIndex.status == '0'){
         MensagemErro();
         fclose(arquivoDadosBIN);
         fclose(arquivoIndexBIN);
         return;
     }
 
-    // marcar arquivo de dados como inconsistente
-    cabecalho.status = '0';
-    EscreverCabecalhoBIN(arquivoDadosBIN, &cabecalho);
-
-    // marcar índice como inconsistente também
-    IndexHeader cabecalhoIndex;
-    cabecalhoIndex.status = '0';
-    fseek(arquivoIndexBIN, 0, SEEK_SET);
-    fwrite(&cabecalhoIndex, sizeof(IndexHeader), 1, arquivoIndexBIN);
-
+    // Carregamos o índice inteiro em memória primária (ENQUANTO ELE AINDA É VALIDO '1')
     IndexRegistro *registrosIndex = NULL;
     int totalRegs = 0;
     CarregarIndex(arquivoIndexBIN, &registrosIndex, &totalRegs, &cabecalhoDados);
+
+    // Marcamos ambos arquivos como inconsistente no disco enquanto realizamos as operações
+    cabecalhoDados.status = '0';
+    EscreverCabecalhoBIN(arquivoDadosBIN, &cabecalhoDados);
+
+    cabecalhoIndex.status = '0';
+    EscreverCabecalhoIndex(arquivoIndexBIN, &cabecalhoIndex);
 
     for (int i = 0; i < nroRemocoes; i++){
         int nroCriterios;
@@ -608,22 +620,22 @@ void Delete(char *arquivoDados, char *arquivoIndex, int nroRemocoes){
         for(int rrnAtual = 0; rrnAtual < cabecalhoDados.proxRRN; rrnAtual++){
             // reposiciona para o registro atual antes de ler
             // isso é necessário porque no caso de remoção voltamos para atualizar o campo de removido, o que atrapalharia a leitura
-            long byteOffset = TAM_CABECALHO + (rrnAtual * TAM_REGISTRO);
+            long byteOffset = TAM_CABECALHO + (long) (rrnAtual * TAM_REGISTRO);
             fseek(arquivoDadosBIN, byteOffset, SEEK_SET); 
 
-            Registro reg;
-            reg.nomeEstacao = NULL;
-            reg.nomeLinha = NULL;
-            LerRegistroBIN(arquivoDadosBIN, &reg);
+            Registro regDados;
+            regDados.nomeEstacao = NULL;
+            regDados.nomeLinha = NULL;
+            LerRegistroBIN(arquivoDadosBIN, &regDados);
 
-            if (reg.removido == '1'){
-                LiberarStringRegistro(&reg);
+            if (regDados.removido == '1'){
+                LiberarStringRegistro(&regDados);
                 continue;
             }
 
             int atendeTodos = 1;
             for(int criterio = 0; criterio < nroCriterios; criterio++){
-                if(VerificaCriterioBusca(&reg, criterios[criterio].nomeDoCampo, criterios[criterio].valorBuscado) != 1){
+                if(VerificaCriterioBusca(&regDados, criterios[criterio].nomeDoCampo, criterios[criterio].valorBuscado) != 1){
                     atendeTodos = 0;
                     break;
                 }
@@ -631,21 +643,21 @@ void Delete(char *arquivoDados, char *arquivoIndex, int nroRemocoes){
 
             if (atendeTodos == 1){
                 // se atendeu os critérios, marca como removido e empilha
-                reg.removido = '1';
-                reg.proximo = cabecalhoDados.topo; 
+                regDados.removido = '1';
+                regDados.proximo = cabecalhoDados.topo; 
                 cabecalhoDados.topo = rrnAtual;
 
                 int byteOffset = TAM_CABECALHO + (rrnAtual * TAM_REGISTRO);
                 fseek(arquivoDadosBIN, byteOffset, SEEK_SET);
 
-                fwrite(&reg.removido, sizeof(char), 1, arquivoDadosBIN);
-                fwrite(&reg.proximo, sizeof(int), 1, arquivoDadosBIN);
+                fwrite(&regDados.removido, sizeof(char), 1, arquivoDadosBIN);
+                fwrite(&regDados.proximo, sizeof(int), 1, arquivoDadosBIN);
                 
-                cabecalhoDados.nroEstacoes--; // atualiza o número de estações no cabeçalho
-                RemoverRegistroIndex(&registrosIndex, &totalRegs, reg.codEstacao);
+
+                RemoverRegistroIndex(&registrosIndex, &totalRegs, regDados.codEstacao);
             }
 
-            LiberarStringRegistro(&reg);
+            LiberarStringRegistro(&regDados);
 
         }
     }
@@ -675,32 +687,35 @@ void Update(char *arquivoDados, char *arquivoIndex, int nroAtualizacoes){
     if(!arquivoIndexBIN){
         MensagemErro();
         fclose(arquivoDadosBIN);
-        fclose(arquivoIndexBIN);
         return;
     }
 
-    Header cabecalho;
-    LerCabecalhoBIN(arquivoDadosBIN, &cabecalho);
-    if(cabecalho.status == '0'){
+    // Lemos os dois cabeçalhos primeiro
+    Header cabecalhoDados;
+    LerCabecalhoBIN(arquivoDadosBIN, &cabecalhoDados);
+
+    IndexHeader cabecalhoIndex;
+    LerCabecalhoIndex(arquivoIndexBIN, &cabecalhoIndex);
+
+    // Verificamos a consitência de ambos
+    if(cabecalhoDados.status == '0' || cabecalhoIndex.status == '0'){
         MensagemErro();
         fclose(arquivoDadosBIN);
         fclose(arquivoIndexBIN);
         return;
     }
 
-    // Marcamos ambos arquivos como inconsistente enquanto realizamos as operações
-    cabecalho.status = '0';
-    EscreverCabecalhoBIN(arquivoDadosBIN, &cabecalho);
-
-    IndexHeader cabecalhoIndex;
-    cabecalhoIndex.status = 0;
-    fseek(arquivoIndexBIN, 0, SEEK_SET);
-    fwrite(&cabecalhoIndex.status, sizeof(char), 1, arquivoIndexBIN);
-
-    // Carregamos o índice inteiro em memória primária
+    // Carregamos o índice inteiro em memória primária (ENQUANTO ELE AINDA É VALIDO '1')
     IndexRegistro *registrosIndex = NULL;
     int totalRegsIndex = 0;
-    CarregarIndex(arquivoIndexBIN, &registrosIndex, &totalRegsIndex);
+    CarregarIndex(arquivoIndexBIN, &registrosIndex, &totalRegsIndex, &cabecalhoDados);
+
+    // Marcamos ambos arquivos como inconsistente no disco enquanto realizamos as operações
+    cabecalhoDados.status = '0';
+    EscreverCabecalhoBIN(arquivoDadosBIN, &cabecalhoDados);
+
+    cabecalhoIndex.status = '0';
+    EscreverCabecalhoIndex(arquivoIndexBIN, &cabecalhoIndex);
 
     for(int op=0; op < nroAtualizacoes; op++){
         // Lê o os critérios de busca
@@ -715,46 +730,46 @@ void Update(char *arquivoDados, char *arquivoIndex, int nroAtualizacoes){
         CriterioBusca criteriosUpdates[p_nroUpdates];
         LerCriteriosBusca(criteriosUpdates, p_nroUpdates);
 
-        for(int RRN_Atual = 0; RRN_Atual < cabecalho.proxRRN; RRN_Atual++){
+        for(int RRN_Atual = 0; RRN_Atual < cabecalhoDados.proxRRN; RRN_Atual++){
             // Calculamos o byteoffset antes de ler, para caso seja preciso reposicionar para escrever
             long byteoffset = TAM_CABECALHO + (long) (RRN_Atual * TAM_REGISTRO);
             fseek(arquivoDadosBIN, byteoffset, SEEK_SET);
 
-            Registro reg;
-            reg.nomeEstacao = NULL;
-            reg.nomeLinha = NULL;
-            LerRegistroBIN(arquivoDadosBIN, &reg);
-            if(reg.removido == '1'){
-                LiberarStringRegistro(&reg);
+            Registro regDados;
+            regDados.nomeEstacao = NULL;
+            regDados.nomeLinha = NULL;
+            LerRegistroBIN(arquivoDadosBIN, &regDados);
+            if(regDados.removido == '1'){
+                LiberarStringRegistro(&regDados);
                 continue;
             }
 
             int atendeTodos = 1; //flag de controle de atender os critérios de busca
             // Loop para verificação se o registro atual atende a todos os critérios de busca
             for(int c = 0; c < m_nroCriterios; c++){
-                if(VerificaCriterioBusca(&reg, criteriosBusca[c].nomeDoCampo, criteriosBusca[c].valorBuscado) != 1){
+                if(VerificaCriterioBusca(&regDados, criteriosBusca[c].nomeDoCampo, criteriosBusca[c].valorBuscado) != 1){
                     atendeTodos = 0;
                     break;
                 }
             }
 
             if(atendeTodos == 1){
-                int codEstacaoAntiga = reg.codEstacao; //guardamos antes de alterar
+                int codEstacaoAntiga = regDados.codEstacao; //guardamos antes de alterar
 
                 //Aplicamos as atualizações em memória primária
-                AplicarUpdates(&reg, criteriosUpdates, p_nroUpdates);
+                AplicarUpdates(&regDados, criteriosUpdates, p_nroUpdates);
 
                 //Reposicionamos o cursor p/ o início deste registro e sobreescrevemos
                 fseek(arquivoDadosBIN, byteoffset, SEEK_SET);
-                EscreverRegistroBIN(arquivoDadosBIN, &reg);
+                EscreverRegistroBIN(arquivoDadosBIN, &regDados);
 
                 //Se houve alteração no ID (codEstacao), ajustamos o índice
-                if(reg.codEstacao != codEstacaoAntiga){
+                if(regDados.codEstacao != codEstacaoAntiga){
                     RemoverRegistroIndex(&registrosIndex, &totalRegsIndex, codEstacaoAntiga);
-                    InserirRegistroIndex(&registrosIndex, reg.codEstacao, RRN_Atual, &totalRegsIndex);
+                    InserirRegistroIndex(&registrosIndex, regDados.codEstacao, RRN_Atual, &totalRegsIndex);
                 }
             }
-            LiberarStringRegistro(&reg);
+            LiberarStringRegistro(&regDados);
         }
     }
 
@@ -763,8 +778,8 @@ void Update(char *arquivoDados, char *arquivoIndex, int nroAtualizacoes){
     free(registrosIndex);
     registrosIndex = NULL;
 
-    cabecalho.status = '1';
-    EscreverCabecalhoBIN(arquivoDadosBIN, &cabecalho);
+    cabecalhoDados.status = '1';
+    EscreverCabecalhoBIN(arquivoDadosBIN, &cabecalhoDados);
 
     fclose(arquivoDadosBIN);
     fclose(arquivoIndexBIN);
