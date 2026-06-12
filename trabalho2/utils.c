@@ -225,7 +225,11 @@ void AplicarUpdates(Registro *reg, CriterioBusca *updates, int nroUpdates){
         /*CAMPOS FIXOS
         Se forem NULOS -1, SE NÃO convertermos a string para inteiro*/
         if(strcmp(campo, "codEstacao") == 0){
-            reg->codEstacao = ehNulo ? -1 : atoi(valor);
+            // codEstacao é chave primária e não aceita valor nulo
+            // só atualizamos se o valor for NÃO nulo
+            if(!ehNulo) {
+                reg->codEstacao = atoi(valor);
+            }
         }
 
         else if(strcmp(campo, "codLinha") == 0){
@@ -354,7 +358,7 @@ void RecalcularContadoresCabecalho(FILE *arquivoDadosBIN, Header *cabecalhoDados
         reg.nomeEstacao = NULL;
         reg.nomeLinha   = NULL;
         LerRegistroBIN(arquivoDadosBIN, &reg);
- 
+
         if(reg.removido != '1'){
             RegistrarEstacaoUnica(controleEstacoes, reg.nomeEstacao);
             RegistrarParUnico(controlePares, reg.codEstacao, reg.codProxEstacao);

@@ -484,6 +484,7 @@ void InsertInto(char *arquivoDados, char *arquivoIndex, int nroInsercoes){
             novo.nomeEstacao = strdup(bufferLeitura);
             novo.tamNomeEstacao = strlen(bufferLeitura);
         }
+        
 
         scanf("%d", &novo.codLinha);
 
@@ -525,6 +526,13 @@ void InsertInto(char *arquivoDados, char *arquivoIndex, int nroInsercoes){
             novo.codEstIntegra = atoi(bufferLeitura);
         }
 
+        // CORREÇÃO: Verifica se a chave (codEstacao) já existe no índice antes de inserir
+        if (BuscarRegistroIndex(registrosIndex, totalRegs, novo.codEstacao) != -1) {
+            // A chave já existe (registro duplicado). 
+            // Liberamos a memória das strings lidas e pulamos essa inserção.
+            LiberarStringRegistro(&novo);
+            continue;
+        }        
         int rrnNovoRegistro;
         if (cabecalhoDados.topo != -1) {
             rrnNovoRegistro = cabecalhoDados.topo;

@@ -1,4 +1,5 @@
 #include "index.h"
+#include <unistd.h>
 
 
 void CarregarIndex(FILE *arquivoIndex, IndexRegistro **registros, int *totalRegs, Header *cabecalhoDados) {
@@ -42,6 +43,10 @@ void ReescritaIndex(FILE *arquivoIndex, IndexRegistro *registros, int totalRegs)
     for (int i = 0; i < totalRegs; i++) {
         EscreverRegistroIndex(arquivoIndex, &registros[i]);
     }
+
+    fflush(arquivoIndex);
+    long tamanhoValido = ftell(arquivoIndex);
+    ftruncate(fileno(arquivoIndex), tamanhoValido);
 }
 
 int BuscarRegistroIndex(IndexRegistro *registros, int totalRegs, int codEstacao) {
@@ -86,7 +91,12 @@ void RemoverRegistroIndex(IndexRegistro **registros, int *totalRegs, int codEsta
     }
 
     (*totalRegs)--;
-    *registros = realloc(*registros, (*totalRegs) * sizeof(IndexRegistro));
+    if (*totalRegs == 0){
+        free(*registros);
+        *registros = NULL;
+    } else {
+        *registros = realloc(*registros, (*totalRegs) * sizeof(IndexRegistro));
+    }
 }
 
 void LerRegistroIndex(FILE *arquivoIndex, IndexRegistro *registro) {
