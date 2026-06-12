@@ -6,18 +6,27 @@ void CarregarIndex(FILE *arquivoIndex, IndexRegistro **registros, int *totalRegs
 
     IndexHeader cabecalhoIndex;
     fseek(arquivoIndex, 0, SEEK_SET);
-    fread(&cabecalhoIndex, sizeof(IndexHeader), 1, arquivoIndex);
+    // Lemos 1 byte do cabeçalho
+    if (fread(&cabecalhoIndex, sizeof(IndexHeader), 1, arquivoIndex) != 1) return;
 
     if (cabecalhoIndex.status == '0') {
         MensagemErro();
         return;
     }
 
-    *totalRegs = cabecalhoDados->nroEstacoes;
-    *registros = (IndexRegistro *)malloc((*totalRegs) * sizeof(IndexRegistro));
+    // A MÁGICA: Calcula a quantidade de registros pelo tamanho real do arquivo
+    fseek(arquivoIndex, 0, SEEK_END);
+    long tamanhoArquivo = ftell(arquivoIndex);
+    *totalRegs = (int)((tamanhoArquivo - 1) / TAM_INDEX_REGISTRO);
 
-    for (int i = 0; i < *totalRegs; i++) {
-        LerRegistroIndex(arquivoIndex, &(*registros)[i]);
+    if (*totalRegs > 0) {
+        *registros = (IndexRegistro *)malloc((*totalRegs) * sizeof(IndexRegistro));
+        fseek(arquivoIndex, 1, SEEK_SET); // Pula o byte de status
+        for (int i = 0; i < *totalRegs; i++) {
+            LerRegistroIndex(arquivoIndex, &(*registros)[i]);
+        }
+    } else {
+        *registros = NULL;
     }
 }
    

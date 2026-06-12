@@ -40,6 +40,7 @@
     void AplicarUpdates(Registro *reg, CriterioBusca *updates, int nroUpdates);
 
     int BuscaSequencial(FILE *arquivoBIN, int proxRRN, CriterioBusca *criterios, int nroCriterios);
+    void RecalcularContadoresCabecalho(FILE *arquivoDadosBIN, Header *cabecalhoDados);
 
     void ImprimirRegistro(const Registro *registroDados);
     void MensagemErro();

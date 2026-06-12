@@ -529,7 +529,7 @@ void InsertInto(char *arquivoDados, char *arquivoIndex, int nroInsercoes){
         if (cabecalhoDados.topo != -1) {
             rrnNovoRegistro = cabecalhoDados.topo;
 
-            int byteoffset = TAM_CABECALHO + (rrnNovoRegistro * TAM_REGISTRO);
+            long byteoffset = TAM_CABECALHO + (rrnNovoRegistro * TAM_REGISTRO);
             fseek(arquivoDadosBIN, byteoffset, SEEK_SET);
 
             Registro removido;
@@ -544,7 +544,7 @@ void InsertInto(char *arquivoDados, char *arquivoIndex, int nroInsercoes){
             cabecalhoDados.proxRRN++;
         }
 
-        int byteoffset = TAM_CABECALHO + (rrnNovoRegistro * TAM_REGISTRO);
+        long byteoffset = TAM_CABECALHO + (rrnNovoRegistro * TAM_REGISTRO);
         fseek(arquivoDadosBIN, byteoffset, SEEK_SET);
         EscreverRegistroBIN(arquivoDadosBIN, &novo);
 
@@ -554,6 +554,9 @@ void InsertInto(char *arquivoDados, char *arquivoIndex, int nroInsercoes){
 
     ReescritaIndex(arquivoIndexBIN, registrosIndex, totalRegs);
     free(registrosIndex);
+
+    // Recalculamos nroEstacoes e nroParesEstacao do zero, pois novos registros foram inseridos
+    RecalcularContadoresCabecalho(arquivoDadosBIN, &cabecalhoDados);
 
     // reescreve o cabecalho do arquivo de dados marcando como consistente ao final da inserção
     // no arquivo de índices, isso já é feito pela ReescritaIndex
@@ -615,53 +618,102 @@ void Delete(char *arquivoDados, char *arquivoIndex, int nroRemocoes){
         CriterioBusca criterios[nroCriterios];
         LerCriteriosBusca(criterios, nroCriterios);
 
-        fseek(arquivoDadosBIN, TAM_CABECALHO, SEEK_SET);
-
-        for(int rrnAtual = 0; rrnAtual < cabecalhoDados.proxRRN; rrnAtual++){
-            // reposiciona para o registro atual antes de ler
-            // isso é necessário porque no caso de remoção voltamos para atualizar o campo de removido, o que atrapalharia a leitura
-            long byteOffset = TAM_CABECALHO + (long) (rrnAtual * TAM_REGISTRO);
-            fseek(arquivoDadosBIN, byteOffset, SEEK_SET); 
-
-            Registro regDados;
-            regDados.nomeEstacao = NULL;
-            regDados.nomeLinha = NULL;
-            LerRegistroBIN(arquivoDadosBIN, &regDados);
-
-            if (regDados.removido == '1'){
-                LiberarStringRegistro(&regDados);
-                continue;
+        // Verifica se codEstacao está entre os filtros para usar o índice
+        int usarIndice = 0;
+        int valorCodEstacao = -1;
+        for(int criterio = 0; criterio < nroCriterios; criterio++){
+            if(strcmp(criterios[criterio].nomeDoCampo, "codEstacao") == 0){
+                usarIndice = 1;
+                valorCodEstacao = atoi(criterios[criterio].valorBuscado);
+                break;
             }
+        }
 
-            int atendeTodos = 1;
-            for(int criterio = 0; criterio < nroCriterios; criterio++){
-                if(VerificaCriterioBusca(&regDados, criterios[criterio].nomeDoCampo, criterios[criterio].valorBuscado) != 1){
-                    atendeTodos = 0;
-                    break;
-                }
-            }
-
-            if (atendeTodos == 1){
-                // se atendeu os critérios, marca como removido e empilha
-                regDados.removido = '1';
-                regDados.proximo = cabecalhoDados.topo; 
-                cabecalhoDados.topo = rrnAtual;
-
-                int byteOffset = TAM_CABECALHO + (rrnAtual * TAM_REGISTRO);
+        if (usarIndice == 1) { // busca binária no índice, caso tenha
+            int posVetor = BuscarRegistroIndex(registrosIndex, totalRegs, valorCodEstacao);
+            if (posVetor != -1) {
+                int rrnAtual = registrosIndex[posVetor].RRN;
+                long byteOffset = TAM_CABECALHO + (long) (rrnAtual * TAM_REGISTRO);
                 fseek(arquivoDadosBIN, byteOffset, SEEK_SET);
 
-                fwrite(&regDados.removido, sizeof(char), 1, arquivoDadosBIN);
-                fwrite(&regDados.proximo, sizeof(int), 1, arquivoDadosBIN);
-                
+                Registro regDados;
+                regDados.nomeEstacao = NULL;
+                regDados.nomeLinha = NULL;
+                LerRegistroBIN(arquivoDadosBIN, &regDados);
 
-                RemoverRegistroIndex(&registrosIndex, &totalRegs, regDados.codEstacao);
+                if (regDados.removido != '1') {
+                    int atendeTodos = 1;
+                    for(int criterio = 0; criterio < nroCriterios; criterio++){
+                        if(VerificaCriterioBusca(&regDados, criterios[criterio].nomeDoCampo, criterios[criterio].valorBuscado) != 1){
+                            atendeTodos = 0;
+                            break;
+                        }
+                    }
+
+                    if (atendeTodos == 1){
+                        // se atendeu os critérios, marca como removido e empilha
+                        regDados.removido = '1';
+                        regDados.proximo = cabecalhoDados.topo; 
+                        cabecalhoDados.topo = rrnAtual;
+
+                        fseek(arquivoDadosBIN, byteOffset, SEEK_SET); // reposiciona antes de gravar
+                        fwrite(&regDados.removido, sizeof(char), 1, arquivoDadosBIN);
+                        fwrite(&regDados.proximo, sizeof(int), 1, arquivoDadosBIN);
+
+                        RemoverRegistroIndex(&registrosIndex, &totalRegs, regDados.codEstacao);
+                    }
+                }
+                LiberarStringRegistro(&regDados);
             }
+        } else { // busca sequencial caso não tenha o índice
+            fseek(arquivoDadosBIN, TAM_CABECALHO, SEEK_SET);
 
-            LiberarStringRegistro(&regDados);
+            for(int rrnAtual = 0; rrnAtual < cabecalhoDados.proxRRN; rrnAtual++){
+                // reposiciona para o registro atual antes de ler
+                // isso é necessário porque no caso de remoção voltamos para atualizar o campo de removido, o que atrapalharia a leitura
+                long byteOffset = TAM_CABECALHO + (long) (rrnAtual * TAM_REGISTRO);
+                fseek(arquivoDadosBIN, byteOffset, SEEK_SET); 
 
+                Registro regDados;
+                regDados.nomeEstacao = NULL;
+                regDados.nomeLinha = NULL;
+                LerRegistroBIN(arquivoDadosBIN, &regDados);
+
+                if (regDados.removido == '1'){
+                    LiberarStringRegistro(&regDados);
+                    continue;
+                }
+
+                int atendeTodos = 1;
+                for(int criterio = 0; criterio < nroCriterios; criterio++){
+                    if(VerificaCriterioBusca(&regDados, criterios[criterio].nomeDoCampo, criterios[criterio].valorBuscado) != 1){
+                        atendeTodos = 0;
+                        break;
+                    }
+                }
+
+                if (atendeTodos == 1){
+                    // se atendeu os critérios, marca como removido e empilha
+                    regDados.removido = '1';
+                    regDados.proximo = cabecalhoDados.topo; 
+                    cabecalhoDados.topo = rrnAtual;
+
+                    fseek(arquivoDadosBIN, byteOffset, SEEK_SET); // reposiciona antes de gravar
+
+                    fwrite(&regDados.removido, sizeof(char), 1, arquivoDadosBIN);
+                    fwrite(&regDados.proximo, sizeof(int), 1, arquivoDadosBIN);
+                    
+                    RemoverRegistroIndex(&registrosIndex, &totalRegs, regDados.codEstacao);
+                }
+
+                LiberarStringRegistro(&regDados);
+            }
         }
     }
-
+    
+    // Recalculamos nroEstacoes e nroParesEstacao do zero, pois registros foram removidos
+    RecalcularContadoresCabecalho(arquivoDadosBIN, &cabecalhoDados);
+    
     // reescreve o índice após as remoções
     ReescritaIndex(arquivoIndexBIN, registrosIndex, totalRegs);
     free(registrosIndex);
@@ -730,53 +782,111 @@ void Update(char *arquivoDados, char *arquivoIndex, int nroAtualizacoes){
         CriterioBusca criteriosUpdates[p_nroUpdates];
         LerCriteriosBusca(criteriosUpdates, p_nroUpdates);
 
-        for(int RRN_Atual = 0; RRN_Atual < cabecalhoDados.proxRRN; RRN_Atual++){
-            // Calculamos o byteoffset antes de ler, para caso seja preciso reposicionar para escrever
-            long byteoffset = TAM_CABECALHO + (long) (RRN_Atual * TAM_REGISTRO);
-            fseek(arquivoDadosBIN, byteoffset, SEEK_SET);
-
-            Registro regDados;
-            regDados.nomeEstacao = NULL;
-            regDados.nomeLinha = NULL;
-            LerRegistroBIN(arquivoDadosBIN, &regDados);
-            if(regDados.removido == '1'){
-                LiberarStringRegistro(&regDados);
-                continue;
+        // Verifica se codEstacao está entre os filtros para usar o índice
+        int usarIndice = 0;
+        int valorCodEstacao = -1;
+        for(int c = 0; c < m_nroCriterios; c++){
+            if(strcmp(criteriosBusca[c].nomeDoCampo, "codEstacao") == 0){
+                usarIndice = 1;
+                valorCodEstacao = atoi(criteriosBusca[c].valorBuscado);
+                break;
             }
+        }
 
-            int atendeTodos = 1; //flag de controle de atender os critérios de busca
-            // Loop para verificação se o registro atual atende a todos os critérios de busca
-            for(int c = 0; c < m_nroCriterios; c++){
-                if(VerificaCriterioBusca(&regDados, criteriosBusca[c].nomeDoCampo, criteriosBusca[c].valorBuscado) != 1){
-                    atendeTodos = 0;
-                    break;
-                }
-            }
-
-            if(atendeTodos == 1){
-                int codEstacaoAntiga = regDados.codEstacao; //guardamos antes de alterar
-
-                //Aplicamos as atualizações em memória primária
-                AplicarUpdates(&regDados, criteriosUpdates, p_nroUpdates);
-
-                //Reposicionamos o cursor p/ o início deste registro e sobreescrevemos
+        if (usarIndice == 1) { // busca binária no índice, caso tenha
+            int posVetor = BuscarRegistroIndex(registrosIndex, totalRegsIndex, valorCodEstacao);
+            if (posVetor != -1) {
+                int RRN_Atual = registrosIndex[posVetor].RRN;
+                long byteoffset = TAM_CABECALHO + (long) (RRN_Atual * TAM_REGISTRO);
                 fseek(arquivoDadosBIN, byteoffset, SEEK_SET);
-                EscreverRegistroBIN(arquivoDadosBIN, &regDados);
 
-                //Se houve alteração no ID (codEstacao), ajustamos o índice
-                if(regDados.codEstacao != codEstacaoAntiga){
-                    RemoverRegistroIndex(&registrosIndex, &totalRegsIndex, codEstacaoAntiga);
-                    InserirRegistroIndex(&registrosIndex, regDados.codEstacao, RRN_Atual, &totalRegsIndex);
+                Registro regDados;
+                regDados.nomeEstacao = NULL;
+                regDados.nomeLinha = NULL;
+                LerRegistroBIN(arquivoDadosBIN, &regDados);
+
+                if(regDados.removido != '1') {
+                    int atendeTodos = 1; 
+                    for(int c = 0; c < m_nroCriterios; c++){
+                        if(VerificaCriterioBusca(&regDados, criteriosBusca[c].nomeDoCampo, criteriosBusca[c].valorBuscado) != 1){
+                            atendeTodos = 0;
+                            break;
+                        }
+                    }
+
+                    if(atendeTodos == 1){
+                        int codEstacaoAntiga = regDados.codEstacao; 
+
+                        //Aplicamos as atualizações em memória primária
+                        AplicarUpdates(&regDados, criteriosUpdates, p_nroUpdates);
+
+                        //Reposicionamos o cursor p/ o início deste registro e sobreescrevemos
+                        fseek(arquivoDadosBIN, byteoffset, SEEK_SET);
+                        EscreverRegistroBIN(arquivoDadosBIN, &regDados);
+
+                        //Se houve alteração no ID (codEstacao), ajustamos o índice
+                        if(regDados.codEstacao != codEstacaoAntiga){
+                            RemoverRegistroIndex(&registrosIndex, &totalRegsIndex, codEstacaoAntiga);
+                            InserirRegistroIndex(&registrosIndex, regDados.codEstacao, RRN_Atual, &totalRegsIndex);
+                        }
+                    }
                 }
+                LiberarStringRegistro(&regDados);
             }
-            LiberarStringRegistro(&regDados);
+
+        } else { // busca sequencial caso não tenha o índice
+            for(int RRN_Atual = 0; RRN_Atual < cabecalhoDados.proxRRN; RRN_Atual++){
+                // Calculamos o byteoffset antes de ler, para caso seja preciso reposicionar para escrever
+                long byteoffset = TAM_CABECALHO + (long) (RRN_Atual * TAM_REGISTRO);
+                fseek(arquivoDadosBIN, byteoffset, SEEK_SET);
+
+                Registro regDados;
+                regDados.nomeEstacao = NULL;
+                regDados.nomeLinha = NULL;
+                LerRegistroBIN(arquivoDadosBIN, &regDados);
+                if(regDados.removido == '1'){
+                    LiberarStringRegistro(&regDados);
+                    continue;
+                }
+
+                int atendeTodos = 1; //flag de controle de atender os critérios de busca
+                // Loop para verificação se o registro atual atende a todos os critérios de busca
+                for(int c = 0; c < m_nroCriterios; c++){
+                    if(VerificaCriterioBusca(&regDados, criteriosBusca[c].nomeDoCampo, criteriosBusca[c].valorBuscado) != 1){
+                        atendeTodos = 0;
+                        break;
+                    }
+                }
+
+                if(atendeTodos == 1){
+                    int codEstacaoAntiga = regDados.codEstacao; //guardamos antes de alterar
+
+                    //Aplicamos as atualizações em memória primária
+                    AplicarUpdates(&regDados, criteriosUpdates, p_nroUpdates);
+
+                    //Reposicionamos o cursor p/ o início deste registro e sobreescrevemos
+                    fseek(arquivoDadosBIN, byteoffset, SEEK_SET);
+                    EscreverRegistroBIN(arquivoDadosBIN, &regDados);
+
+                    //Se houve alteração no ID (codEstacao), ajustamos o índice
+                    if(regDados.codEstacao != codEstacaoAntiga){
+                        RemoverRegistroIndex(&registrosIndex, &totalRegsIndex, codEstacaoAntiga);
+                        InserirRegistroIndex(&registrosIndex, regDados.codEstacao, RRN_Atual, &totalRegsIndex);
+                    }
+                }
+                LiberarStringRegistro(&regDados);
+            }
         }
     }
+    
 
     //Reescrevemos o índice atualizado e alteramos o arquivo para consistente
     ReescritaIndex(arquivoIndexBIN, registrosIndex, totalRegsIndex);
     free(registrosIndex);
     registrosIndex = NULL;
+
+    // Recalculamos nroEstacoes e nroParesEstacao do zero, pois registros podem ter sido alterados
+    RecalcularContadoresCabecalho(arquivoDadosBIN, &cabecalhoDados);
 
     cabecalhoDados.status = '1';
     EscreverCabecalhoBIN(arquivoDadosBIN, &cabecalhoDados);

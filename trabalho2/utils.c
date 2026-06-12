@@ -337,6 +337,39 @@ int BuscaSequencial(FILE *arquivoBIN, int proxRRN, CriterioBusca *criterios, int
     return registroEncontrado;
 }
 
+/*Relê todos os registros não-removidos do arquivo de dados para recalcular do zero
+os campos nroEstacoes e nroParesEstacao do cabeçalho, usando as mesmas estruturas
+de controle do CreateTable. Deve ser chamada antes de gravar o cabeçalho final
+nas operações de Insert, Delete e Update.*/
+void RecalcularContadoresCabecalho(FILE *arquivoDadosBIN, Header *cabecalhoDados){
+    // Reutilizamos as mesmas estruturas auxiliares do CreateTable
+    ControleEstacoes *controleEstacoes = InicializarControleEstacoes();
+    ControlePares    *controlePares    = InicializarControlePares();
+ 
+    Registro reg;
+ 
+    // Percorremos todos os registros válidos (não-removidos)
+    fseek(arquivoDadosBIN, TAM_CABECALHO, SEEK_SET);
+    for(int i = 0; i < cabecalhoDados->proxRRN; i++){
+        reg.nomeEstacao = NULL;
+        reg.nomeLinha   = NULL;
+        LerRegistroBIN(arquivoDadosBIN, &reg);
+ 
+        if(reg.removido != '1'){
+            RegistrarEstacaoUnica(controleEstacoes, reg.nomeEstacao);
+            RegistrarParUnico(controlePares, reg.codEstacao, reg.codProxEstacao);
+        }
+        LiberarStringRegistro(&reg);
+    }
+ 
+    // Atualiza os campos do cabeçalho em memória primária
+    cabecalhoDados->nroEstacoes     = controleEstacoes->totalEstacoesUnicas;
+    cabecalhoDados->nroParesEstacao = controlePares->totalParesUnicos;
+ 
+    LiberarControleEstacoes(controleEstacoes);
+    LiberarControlePares(controlePares);
+}
+
 /*Exibe os campos de um registro na tela, substituindo -1 ou NULL,
 pela palavra "NULO"*/
 void ImprimirRegistro(const Registro *registroDados){
