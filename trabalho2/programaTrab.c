@@ -40,7 +40,7 @@ int main(int argc, char *argv[]){
 
         case CREATE_INDEX:
             scanf("%s %s", arquivoEntrada, arquivoSaida);
-            CriarIndex(arquivoEntrada, arquivoSaida);
+            CreateIndex(arquivoEntrada, arquivoSaida);
             break;
 
         case SELECT_WHERE_USING_INDEX:

@@ -341,14 +341,12 @@ int BuscaSequencial(FILE *arquivoBIN, int proxRRN, CriterioBusca *criterios, int
     return registroEncontrado;
 }
 
-/*Relê todos os registros não-removidos do arquivo de dados para recalcular do zero
-os campos nroEstacoes e nroParesEstacao do cabeçalho, usando as mesmas estruturas
-de controle do CreateTable. Deve ser chamada antes de gravar o cabeçalho final
-nas operações de Insert, Delete e Update.*/
+/*Relê todos os registros não removidos do arquivo de dados para recalcular do zero
+os campos nroEstacoes e nroParesEstacao do cabeçalho */
 void RecalcularContadoresCabecalho(FILE *arquivoDadosBIN, Header *cabecalhoDados){
     // Reutilizamos as mesmas estruturas auxiliares do CreateTable
     ControleEstacoes *controleEstacoes = InicializarControleEstacoes();
-    ControlePares    *controlePares    = InicializarControlePares();
+    ControlePares *controlePares = InicializarControlePares();
  
     Registro reg;
  
@@ -356,7 +354,7 @@ void RecalcularContadoresCabecalho(FILE *arquivoDadosBIN, Header *cabecalhoDados
     fseek(arquivoDadosBIN, TAM_CABECALHO, SEEK_SET);
     for(int i = 0; i < cabecalhoDados->proxRRN; i++){
         reg.nomeEstacao = NULL;
-        reg.nomeLinha   = NULL;
+        reg.nomeLinha = NULL;
         LerRegistroBIN(arquivoDadosBIN, &reg);
 
         if(reg.removido != '1'){
@@ -367,7 +365,7 @@ void RecalcularContadoresCabecalho(FILE *arquivoDadosBIN, Header *cabecalhoDados
     }
  
     // Atualiza os campos do cabeçalho em memória primária
-    cabecalhoDados->nroEstacoes     = controleEstacoes->totalEstacoesUnicas;
+    cabecalhoDados->nroEstacoes = controleEstacoes->totalEstacoesUnicas;
     cabecalhoDados->nroParesEstacao = controlePares->totalParesUnicos;
  
     LiberarControleEstacoes(controleEstacoes);

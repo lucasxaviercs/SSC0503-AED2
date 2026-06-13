@@ -22,7 +22,7 @@
     void RecuperacaoRRN(char *arquivoEntrada, int RRN);
     
     // cria o arquivo de índice a partir do arquivo de dados, usando codEstacao para indexar
-    void CriarIndex(char *arquivoDados, char *arquivoIndex);
+    void CreateIndex(char *arquivoDados, char *arquivoIndex);
 
     // Busca com índice primário/ chave (codEstação) ou sequencial (demais campos, como no SelectWhere)
     void SelectWhereIndex(char *arquivoDados, char *arquivoIndex, int nroBuscas);
