@@ -214,6 +214,7 @@ int VerificaCriterioBusca(const Registro *registroDados, const char *nomeDoCampo
     return 0;
 }
 
+/* Modifica os campos do registro em RAM com os novos valores solicitados*/
 void AplicarUpdates(Registro *reg, CriterioBusca *updates, int nroUpdates){
     for(int updt = 0; updt < nroUpdates; updt++){
         const char *campo = updates[updt].nomeDoCampo;
@@ -286,6 +287,9 @@ void AplicarUpdates(Registro *reg, CriterioBusca *updates, int nroUpdates){
     }
 }
 
+/* Varre o arquivo linearmente inteiro filtrando os registros que atendam aos
+critérios. Imprime os que bateram com a busca e retorna 1 (sucesso) se encontrar algo,
+ou 0 caso contrário */
 int BuscaSequencial(FILE *arquivoBIN, int proxRRN, CriterioBusca *criterios, int nroCriterios){
     int BuscaPorID = 0; // Flag de ID (codEstacao) para parar a busca quando for encotrado
     for(int c = 0; c < nroCriterios; c++){ // Verificamos se a busca atual tem o campo codEstacao

@@ -19,26 +19,32 @@
         int RRN; // RRN do registro correspondente ao código da estação
     } IndexRegistro;
 
-    // carrega o arquivo de índice em memória primária para uso
+    // Carrega o arquivo de índice em memória primária para uso
     void CarregarIndex(FILE *arquivoIndex, IndexRegistro **registros, int *totalRegs, Header *cabecalhoDados);
-    // reescreve o arquivo de índice no disco após operações
+
+    // Reescreve o arquivo de índice no disco após operações
     void ReescritaIndex(FILE *arquivoIndex, IndexRegistro *registros, int totalRegs, char *nomeArquivo);
 
-    // operações de busca, inserção e remoção no índice
+    // Realiza busca binária no vetor de índices
     int BuscarRegistroIndex(IndexRegistro *registros, int totalRegs, int codEstacao);
+
+    // Insere ordenadamente um novo ID e RRN no vetor de índices, abrindo espaço
     void InserirRegistroIndex(IndexRegistro **registros, int codEstacao, int RRN, int *totalRegs);
+
+    // Remove um ID do vetor de índices, realocando e puxando os elementos restantes para a esquerda
     void RemoverRegistroIndex(IndexRegistro **registros, int *totalRegs, int codEstacao);
 
-    // função auxiliar para ler um registro do arquivo de índices para struct
+    // Função auxiliar para ler um registro do arquivo de índices para struct
     void LerRegistroIndex(FILE *arquivoIndex, IndexRegistro *registro);
-    // função auxiliar para escrever um registro da struct para o arquivo de índices
+
+    // Função auxiliar para escrever um registro da struct para o arquivo de índices
     void EscreverRegistroIndex(FILE *arquivoIndex, IndexRegistro *registro);
 
-    // realiza a leitura da estrutura de cabeçalho dos índices
+    // Realiza a leitura da estrutura de cabeçalho dos índices
     void LerCabecalhoIndex(FILE *arquivoIndex, IndexHeader *cabecalhoIndex);
 
-    // escreve a estrutura do cabeçalho do índice, reposicionando o cursor no ínicio do arquivo com fseek()
+    // Escreve a estrutura do cabeçalho do índice, reposicionando o cursor no ínicio do arquivo com fseek()
     void EscreverCabecalhoIndex(FILE *arquivoIndex, IndexHeader *cabecalhoIndex);
 
-    // função auxiliar para o uso do quicksort da stdlib
+    // Função auxiliar para o uso do quicksort da stdlib
     int CompararIndexRegistro(const void *A, const void *B);

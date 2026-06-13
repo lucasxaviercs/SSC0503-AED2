@@ -15,7 +15,11 @@
         int nroParesEstacao; // indica a quantidade de pares (codEstacao, codProxEstacao) 
     } Header;
 
+    // Aloca e inicializa a struct do cabeçalho na RAM com os valores padrão
     Header *InicializarCabecalho();
 
+    // Posiciona o cursor no byte zero e lê os 17 bytes do cabeçalho para a struct
     void LerCabecalhoBIN(FILE *arquivoBIN, Header *cabecalho);
+
+    // Posiciona o cursor no byte zero e graas os dados da struct no disco
     void EscreverCabecalhoBIN(FILE* arquivoBIN, const Header* cabecalho);

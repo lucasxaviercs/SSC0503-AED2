@@ -143,9 +143,9 @@ void SelectWhereIndex(char *arquivoDados, char *arquivoIndex, int nroBuscas){
     }
 
     //  - LAZY LOADING - 
-    // Indice carregado em memoria primaria apenas quando necessario
-    // posto que ele pode fazer N buscas e nenhuma usar o 'codEstacao'
-    // portanto não ser plausível de otimização com base no índice
+    // Indice carregado em memoria primária apenas quando necessario
+    // posto que ele pode fazer N buscas e nenhuma usar o 'codEstacao',
+    // portanto não será plausível de otimização com base no índic
     IndexRegistro *registrosIndex = NULL;
     int totalRegsIndex = 0;
     int indiceCarregado = 0; // flag indicadora de se já trouxemos ou não o índice pra RAM (0 = NÃO TROUXE | 1 = TROUXEMOS PARA A RAM)

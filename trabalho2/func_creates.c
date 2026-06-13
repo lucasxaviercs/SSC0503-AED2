@@ -10,7 +10,6 @@ void CreateTable(char *arquivoEntrada, char *arquivoSaida){
     // Abortando funcionalidade caso ocorra erro na abertura do arquivo CSV
     if(arquivoCSV == NULL){
         MensagemErro();
-        fclose(arquivoCSV);
         return;
     }
 

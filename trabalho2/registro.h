@@ -22,6 +22,11 @@
         char *nomeLinha; // nome da linha
     } Registro;
 
+    // Lê 80 bytes do disco e extrai os campos para a struct, alocando as strings dinâmicamente
     void LerRegistroBIN(FILE *arquivoBIN, Registro *registroDados);
+
+    // Extrai e converte os dados de uma linha de texto do CSV para a struct do registro
     void LerRegistroCSV(FILE *arquivoCSV, Registro *registroDados);
+
+    // Grava a struct no disco, preenchendo o espaço que sobra com lixo ('$')
     void EscreverRegistroBIN(FILE* arquivoBIN, const Registro* registroDados);
