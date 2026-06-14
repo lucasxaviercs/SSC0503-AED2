@@ -18,6 +18,7 @@ void CreateTable(char *arquivoEntrada, char *arquivoSaida){
     // Abortando funcionalidade caso ocorra erro na abertura do arquivo BIN
     if(arquivoBIN == NULL){
         MensagemErro();
+        free(arquivoCSV);
         return;
     }
 

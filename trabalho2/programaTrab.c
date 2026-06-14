@@ -9,7 +9,10 @@ int main(int argc, char *argv[]){
     char *arquivoEntrada = malloc(100 * sizeof(char));
     char *arquivoSaida = malloc(100 * sizeof(char));
 
-    if(scanf("%d", &funcionalidade) != 1) return 0;
+    if(scanf("%d", &funcionalidade) != 1){
+        free(arquivoEntrada); free(arquivoSaida);
+        return 0;
+    }
 
     switch (funcionalidade) {
         case CREATE_TABLE: 
