@@ -49,18 +49,27 @@ void Delete(char *arquivoDados, char *arquivoIndex, int nroRemocoes) {
         return;
     }
 
-    // Realiza a leitura do cabeçalho 
+    // Lemos os dois cabeçalhos primeiro para checar a consistência dos arquivos ('1')
     Header cabecalhoDados;
     LerCabecalhoBIN(arquivoDadosBIN, &cabecalhoDados);
-    if (cabecalhoDados.status == '0') {
+
+    IndexHeader cabecalhoIndex;
+    LerCabecalhoIndex(arquivoIndexBIN, &cabecalhoIndex);
+
+    // Verificamos a consitência de ambos
+    if(cabecalhoDados.status == '0' || cabecalhoIndex.status == '0'){
         MensagemErro();
-        fclose(arquivoDadosBIN); fclose(arquivoIndexBIN);
+        fclose(arquivoDadosBIN);
+        fclose(arquivoIndexBIN);
         return;
     }
 
-    // Marca o arquivo como inconsistente durante a operação da funcionalidade
+    // Marcamos ambos arquivos como inconsistente no disco enquanto realizamos as operações
     cabecalhoDados.status = '0';
     EscreverCabecalhoBIN(arquivoDadosBIN, &cabecalhoDados);
+
+    cabecalhoIndex.status = '0';
+    EscreverCabecalhoIndex(arquivoIndexBIN, &cabecalhoIndex);
 
     // Carrega o índice para memória primária
     IndexRegistro *registrosIndex = NULL;
@@ -204,18 +213,27 @@ void InsertInto(char *arquivoDados, char *arquivoIndex, int nroInsercoes) {
         return;
     }
 
-    // Verificação da consistência do arquivo
+    // Lemos os dois cabeçalhos primeiro para checar a consistência dos arquivos ('1')
     Header cabecalhoDados;
     LerCabecalhoBIN(arquivoDadosBIN, &cabecalhoDados);
-    if (cabecalhoDados.status == '0') {
+
+    IndexHeader cabecalhoIndex;
+    LerCabecalhoIndex(arquivoIndexBIN, &cabecalhoIndex);
+
+    // Verificamos a consitência de ambos
+    if(cabecalhoDados.status == '0' || cabecalhoIndex.status == '0'){
         MensagemErro();
-        fclose(arquivoDadosBIN); fclose(arquivoIndexBIN);
+        fclose(arquivoDadosBIN);
+        fclose(arquivoIndexBIN);
         return;
     }
 
-    // Marcamos como inconsistente enquanto realizamos as operações
+    // Marcamos ambos arquivos como inconsistente no disco enquanto realizamos as operações
     cabecalhoDados.status = '0';
     EscreverCabecalhoBIN(arquivoDadosBIN, &cabecalhoDados);
+
+    cabecalhoIndex.status = '0';
+    EscreverCabecalhoIndex(arquivoIndexBIN, &cabecalhoIndex);
 
     // Colocamos os índices em memória primária para agilizar as buscas e/ou verificações de registros
     IndexRegistro *registrosIndex = NULL;
