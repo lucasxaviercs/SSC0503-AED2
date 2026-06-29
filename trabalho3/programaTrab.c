@@ -74,7 +74,21 @@ int main(int argc, char *argv[]){
             Update(arquivoEntrada, arquivoSaida, nroUpdates);
             break;
         }
+
+        case GERAR_GRAFO:
+            scanf("%s", arquivoEntrada);
+            GerarGrafo(arquivoEntrada);
+            break;
         
+        case DIJKSTRA:
+            break;
+
+        case ARVORE_GERADORA_MINIMA:
+            break;
+        
+        case CONTAR_CICLOS:
+            break;
+
         default:
             printf("Funcionalidade inválida.\n");
             break;

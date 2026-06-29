@@ -3,6 +3,7 @@
     #include "header.h"
     #include "registro.h"
     #include "index.h"
+    #include "grafo.h"
     #include "utils.h"
 
     #define CREATE_TABLE               1
@@ -14,6 +15,10 @@
     #define DELETE                     7
     #define INSERT_INTO                8
     #define UPDATE                     9
+    #define GERAR_GRAFO                10
+    #define DIJKSTRA                   11
+    #define ARVORE_GERADORA_MINIMA     12
+    #define CONTAR_CICLOS              13
 
     // ==================== FUNC_CREATES ====================
 
@@ -42,3 +47,18 @@
     void InsertInto(char *arquivoDados, char *arquivoIndex, int nroInsercoes);
     // Atualiza os registro com base nos filtros de buscas aplicados
     void Update(char *arquivoDados, char *arquivoIndex, int nroAtualizacoes);
+
+    // ================== FUNC_GRAFOS =================
+
+    // a partir do arquivo de dados binário, gera um grafo que representa as estações, conexões e distâncias entre elas
+    void GerarGrafo(char *arquivoEntrada);
+    // dado uma estação de origem e uma de destino, retorna o menor caminho entre elas
+    void Dijkstra(char *arquivoEntrada, char *campoOrigem, char*valorOrigem, char *campoDestino, char*valorDestino);
+    // dado uma estação de origem, encontra uma forma de conectar todas as outras com o menor percurso possível
+    void ArvoreGeradoraMinima(char *arquivoEntrada, char *campoOrigem, char*valorOrigem);
+    // dado uma estação de origem, retorna a quantidade de ciclos simples existentes no grafo a partir dela. Se não houver ciclos, retorna -1
+    void ContarCiclos(char *arquivoEntrada, char *campoOrigem, char*valorOrigem);
+
+
+
+
