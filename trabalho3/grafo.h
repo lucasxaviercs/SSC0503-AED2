@@ -23,3 +23,15 @@
     } Grafo;
 
     
+    Grafo* InicializarGrafo();
+
+    int BuscarVertice(Grafo *g, const char *nomeEstacao);
+
+    int InserirVerticeOrdenado(Grafo *g, const char *nomeEstacao);
+
+    int InserirArestaOrdenada(Grafo *g, int idxOrigem, const char *nomeProxEstacao,
+                              int distancia, const char *nomeLinha);
+
+    void ImprimirGrafo(Grafo *g);
+
+    void LiberarGrafo(Grafo *g);
