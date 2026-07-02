@@ -19,7 +19,7 @@ int BuscarVertice(Grafo *g, const char *nomeEstacao){
     int dir = g->n_vertices - 1;
 
     while (esq <= dir){
-        int meio = esq + (dir - esq) / 2
+        int meio = esq + (dir - esq) / 2;
         int comp = strcmp(g->vertices[meio].nomeEstacao, nomeEstacao);
 
         if (comp == 0){
@@ -40,7 +40,7 @@ int InserirVerticeOrdenado(Grafo *g, const char *nomeEstacao){
     if (g == NULL || nomeEstacao == NULL) return -1;
 
     int pos = BuscarVertice(g, nomeEstacao);
-    if (pos != 1) return pos;
+    if (pos != -1) return pos;
 
     g->vertices = realloc(g->vertices, (g->n_vertices + 1) * sizeof(Vertice));
 
@@ -63,7 +63,8 @@ int InserirVerticeOrdenado(Grafo *g, const char *nomeEstacao){
     return novaPos;
 }
 
-int InserirArestaOrdenada(Grafo *g, int idxOrigem, const char *nomeProxEstacao, int distancia, const char *nomeLinha){
+void InserirArestaOrdenada(Grafo *g, int idxOrigem, const char *nomeProxEstacao, int distancia, const char *nomeLinha){
+
     if (g == NULL || nomeProxEstacao == NULL || nomeLinha == NULL) return;
 
     Vertice *origem = &g->vertices[idxOrigem];
@@ -116,13 +117,33 @@ int InserirArestaOrdenada(Grafo *g, int idxOrigem, const char *nomeProxEstacao, 
     if (anterior == NULL){
         origem->arestas = novoNode; // Inserção no início da lista
     } else {
-        anterior->prox = novoNode;  // Inserção no meio/fim
+        anterior->prox = novoNode; // Inserção no meio/fim
     }
 }
 
  void ImprimirGrafo(Grafo *g){
-    if (g == NULL) return;
-    // Ver formatação runcodes
+    if (g == NULL || g->n_vertices == 0) return;
+
+    for (int i = 0; i < g->n_vertices; i++){
+        // Imprime o vértice atual (origem)
+        printf("%s", g->vertices[i].nomeEstacao);
+        
+        Node *atual = g->vertices[i].arestas;
+        
+        // Percorre a lista de adjacências
+        while (atual != NULL){
+            // Imprime o destino e a distância
+            printf(", %s, %d", atual->nomeProxEstacao, atual->distProxEstacao);
+            
+            // Imprime todas as linhas associadas a essa aresta
+            for (int k = 0; k < atual->n_linhas; k++) {
+                printf(", %s", atual->linhas[k]);
+            }
+            
+            atual = atual->prox;
+        }
+        printf("\n");
+    }
  }
 
  void LiberarGrafo(Grafo *g){
