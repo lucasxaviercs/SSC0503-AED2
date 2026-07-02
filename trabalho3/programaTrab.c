@@ -84,7 +84,18 @@ int main(int argc, char *argv[]){
         }
         
         case DIJKSTRA:
+        {
+            char campoOrigem[50], valorOrigem[100];
+            char campoDestino[50], valorDestino[100];
+            scanf("%s %s", arquivoEntrada, arquivoIndice);
+            scanf("%s", campoOrigem);
+            ScanQuoteString(valorOrigem);
+            scanf("%s", campoDestino);
+            ScanQuoteString(valorDestino);
+
+            Dijkstra(arquivoEntrada, arquivoIndice, campoOrigem, valorOrigem, campoDestino, valorDestino);
             break;
+        }
 
         case ARVORE_GERADORA_MINIMA:
             break;
