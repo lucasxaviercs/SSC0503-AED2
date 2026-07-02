@@ -98,9 +98,17 @@ int main(int argc, char *argv[]){
         }
 
         case ARVORE_GERADORA_MINIMA:
+            char campoOrigem[50], valorOrigem[100];
+            scanf("%s %s", arquivoEntrada, campoOrigem);
+            ScanQuoteString(valorOrigem);
+            ArvoreGeradoraMinima(arquivoEntrada, arquivoIndice, campoOrigem, valorOrigem);
             break;
         
         case CONTAR_CICLOS:
+            char campoOrigem[50], valorOrigem[100];
+            scanf("%s %s", arquivoEntrada, campoOrigem);
+            ScanQuoteString(valorOrigem);
+            ContarCiclos(arquivoEntrada, arquivoIndice, campoOrigem, valorOrigem);
             break;
 
         default:
