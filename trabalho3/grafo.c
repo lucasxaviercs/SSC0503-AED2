@@ -1,6 +1,25 @@
 #include "grafo.h"
 
 
+static char* BuscarNomeNoDisco(FILE *arquivoBIN, int rrnDestino){
+    long posAtual = ftell(arquivoBIN);
+    long byteoffset = TAM_CABECALHO + (rrnDestino * TAM_REGISTRO);
+    fseek(arquivoBIN, byteoffset, SEEK_SET);
+    
+    Registro regDestino;
+    regDestino.nomeEstacao = NULL;
+    regDestino.nomeLinha = NULL;
+    LerRegistroBIN(arquivoBIN, &regDestino);
+    
+    char *nomeEncontrado = malloc( strlen(regDestino.nomeEstacao) + 1);
+    strcpy(nomeEncontrado, regDestino.nomeEstacao);
+    
+    LiberarStringRegistro(&regDestino);
+    fseek(arquivoBIN, posAtual, SEEK_SET);
+    
+    return nomeEncontrado;
+}
+
 Grafo* InicializarGrafo() {
     Grafo *g = malloc(sizeof(Grafo));
     if (g != NULL){
@@ -8,6 +27,102 @@ Grafo* InicializarGrafo() {
         g->vertices = NULL;
     }
 
+    return g;
+}
+
+Grafo* ConstruirGrafo(char *arquivoEntrada, char *arquivoIndice){
+    FILE *arquivoBIN = fopen(arquivoEntrada, "rb");
+    if (arquivoBIN == NULL) return NULL;
+
+    Header cabecalho;
+    LerCabecalhoBIN(arquivoBIN, &cabecalho);
+    if (cabecalho.status == '0' || cabecalho.proxRRN == 0){
+        fclose(arquivoBIN); return NULL;
+    }
+
+    Grafo *g = InicializarGrafo();
+    IndexRegistro *vetorIndices = NULL;
+    int totalIndices = 0;
+    int indiceCarregadoDoArquivo = 0;
+
+    // Com o arquivo de índice, carregamos os índices para memória primária
+    if (arquivoIndice != NULL){
+        FILE *arquivoIndexBIN = fopen(arquivoIndice, "rb");
+        if (arquivoIndexBIN != NULL){
+            CarregarIndex(arquivoIndexBIN, &vetorIndices, &totalIndices, &cabecalho);
+            fclose(arquivoIndexBIN);
+            indiceCarregadoDoArquivo = 1;
+        }
+    }
+
+    // Caso o índice NÃO foi carregado, iremos montá-lo
+    if (indiceCarregadoDoArquivo == 0){
+        vetorIndices = malloc(cabecalho.proxRRN * sizeof(IndexRegistro));
+    }
+
+    fseek(arquivoBIN, TAM_CABECALHO, SEEK_SET);
+    Registro reg;
+    
+    for (int i = 0; i < cabecalho.proxRRN; i++){
+        reg.nomeEstacao = NULL;
+        reg.nomeLinha = NULL;
+        LerRegistroBIN(arquivoBIN, &reg);
+
+        if (reg.removido == '0'){
+            InserirVerticeOrdenado(g, reg.nomeEstacao);
+            
+            if (indiceCarregadoDoArquivo == 0){ // caso ainda NÃO carregamos o arquivo de índice
+                vetorIndices[totalIndices].codEstacao = reg.codEstacao;
+                vetorIndices[totalIndices].RRN = i;
+                totalIndices++;
+            }
+        }
+        LiberarStringRegistro(&reg);
+    }
+
+    if (indiceCarregadoDoArquivo == 0){ // Ordena apenas se criamos na hora
+        qsort(vetorIndices, totalIndices, sizeof(IndexRegistro), CompararIndexRegistro);
+    }
+
+    fseek(arquivoBIN, TAM_CABECALHO, SEEK_SET);
+
+    // Inserir arestas com Busca Binária
+    for (int i = 0; i < cabecalho.proxRRN; i++){
+        reg.nomeEstacao = NULL;
+        reg.nomeLinha = NULL;
+        LerRegistroBIN(arquivoBIN, &reg);
+
+        if (reg.removido == '0'){
+            int idxOrigem = BuscarVertice(g, reg.nomeEstacao);
+
+            // Aresta Normal
+            if (reg.codProxEstacao != -1){
+                int posIndex = BuscarRegistroIndex(vetorIndices, totalIndices, reg.codProxEstacao);
+                if (posIndex != -1){
+                    char *nomeProx = BuscarNomeNoDisco(arquivoBIN, vetorIndices[posIndex].RRN);
+                    InserirArestaOrdenada(g, idxOrigem, nomeProx, reg.distProxEstacao, reg.nomeLinha);
+                    free(nomeProx);
+                }
+            }
+
+            // Aresta de Integração
+            if (reg.codEstIntegra != -1) {
+                int posIndex = BuscarRegistroIndex(vetorIndices, totalIndices, reg.codEstIntegra);
+                if (posIndex != -1) {
+                    char *nomeIntegra = BuscarNomeNoDisco(arquivoBIN, vetorIndices[posIndex].RRN);
+                    if (strcmp(reg.nomeEstacao, nomeIntegra) != 0) {
+                        InserirArestaOrdenada(g, idxOrigem, nomeIntegra, 0, "Integração");
+                    }
+                    free(nomeIntegra);
+                }
+            }
+        }
+        LiberarStringRegistro(&reg);
+    }
+
+    if (vetorIndices != NULL) free(vetorIndices);
+    
+    fclose(arquivoBIN);
     return g;
 }
 

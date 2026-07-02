@@ -3,6 +3,10 @@
     #include <stdio.h>
     #include <stdlib.h>
     #include <string.h>
+    #include "header.h"
+    #include "registro.h"
+    #include "index.h"
+    #include "utils.h"
 
     typedef struct node {
         char *nomeProxEstacao;
@@ -24,6 +28,8 @@
 
     
     Grafo* InicializarGrafo();
+
+    Grafo* ConstruirGrafo(char *arquivoEntrada, char *arquivoIndice);
 
     int BuscarVertice(Grafo *g, const char *nomeEstacao);
 

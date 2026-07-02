@@ -27,7 +27,6 @@
     // Extrai os codEstacao e RRN para criar o índice, ordena em RAM e salva em um arquivo de índice
     void CreateIndex(char *arquivoDados, char *arquivoIndex); 
 
-
     // ================== FUNC_SELECTS_RRN ==================
 
     // Varre o arquivo binário do início ao fim e imprime todos os registros que estão ativos
@@ -51,14 +50,11 @@
     // ================== FUNC_GRAFOS =================
 
     // a partir do arquivo de dados binário, gera um grafo que representa as estações, conexões e distâncias entre elas
-    void GerarGrafo(char *arquivoEntrada);
+    void GerarGrafo(char *arquivoEntrada, char *arquivoIndex);
     // dado uma estação de origem e uma de destino, retorna o menor caminho entre elas
-    void Dijkstra(char *arquivoEntrada, char *campoOrigem, char*valorOrigem, char *campoDestino, char*valorDestino);
+    void Dijkstra(char *arquivoEntrada, char *arquivoIndex, char *campoOrigem, char*valorOrigem, char *campoDestino, char*valorDestino);
     // dado uma estação de origem, encontra uma forma de conectar todas as outras com o menor percurso possível
-    void ArvoreGeradoraMinima(char *arquivoEntrada, char *campoOrigem, char*valorOrigem);
+    void ArvoreGeradoraMinima(char *arquivoEntrada, char *arquivoIndex, char *campoOrigem, char*valorOrigem);
     // dado uma estação de origem, retorna a quantidade de ciclos simples existentes no grafo a partir dela. Se não houver ciclos, retorna -1
-    void ContarCiclos(char *arquivoEntrada, char *campoOrigem, char*valorOrigem);
-
-
-
+    void ContarCiclos(char *arquivoEntrada, char *arquivoIndex, char *campoOrigem, char *valorOrigem);
 

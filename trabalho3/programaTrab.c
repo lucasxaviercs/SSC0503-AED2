@@ -8,6 +8,7 @@ int main(int argc, char *argv[]){
 
     char *arquivoEntrada = malloc(100 * sizeof(char));
     char *arquivoSaida = malloc(100 * sizeof(char));
+    char *arquivoIndice = malloc(100 * sizeof(char));
 
     if(scanf("%d", &funcionalidade) != 1) return 0;
 
@@ -76,9 +77,11 @@ int main(int argc, char *argv[]){
         }
 
         case GERAR_GRAFO:
-            scanf("%s", arquivoEntrada);
-            GerarGrafo(arquivoEntrada);
+        {
+            scanf("%s %s", arquivoEntrada, arquivoIndice);
+            GerarGrafo(arquivoEntrada, arquivoIndice);
             break;
+        }
         
         case DIJKSTRA:
             break;
@@ -94,9 +97,8 @@ int main(int argc, char *argv[]){
             break;
     }
 
-    free(arquivoEntrada);
-    arquivoEntrada = NULL;
-    free(arquivoSaida);
-    arquivoSaida = NULL;
+    free(arquivoEntrada); arquivoEntrada = NULL;
+    free(arquivoSaida); arquivoSaida = NULL;
+    free(arquivoIndice); arquivoIndice = NULL;
 
 }
