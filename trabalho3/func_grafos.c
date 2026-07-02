@@ -87,3 +87,27 @@ void Dijkstra(char *arquivoEntrada, char *arquivoIndex, char *campoOrigem, char*
 
     free(dist); free(ant); free(visitado); LiberarGrafo(g);
 }
+
+void ContarCiclos(char *arquivoEntrada, char *arquivoIndex, char *campoOrigem, char *valorOrigem) {
+    Grafo *g = ConstruirGrafo(arquivoEntrada, arquivoIndex);
+    if (g == NULL) { printf("Falha na execução da funcionalidade.\n"); return; }
+
+    // busca o índice do vértice de origem no grafo
+    int origem = BuscarVertice(g, valorOrigem);
+    if (origem == -1) { LiberarGrafo(g); printf("Falha na execução da funcionalidade.\n"); return; }
+
+    // cria um array de flags para marcar os vértices que já visitamos
+    // calloc já inicializa com 0, ou seja, não visitado
+    int *visitado = calloc(g->n_vertices, sizeof(int));
+    int total = 0; // variável para armazenar o número de ciclos
+
+    visitado[origem] = 1;
+
+    ChecaCiclos(g, origem, origem, visitado, &total);
+
+    // printa -1 se não há ciclos e o total de ciclos caso contrário
+    printf("Quantidade de ciclos: %d\n", total == 0 ? -1 : total);
+
+    free(visitado);
+    LiberarGrafo(g);
+}

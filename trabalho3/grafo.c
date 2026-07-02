@@ -288,3 +288,25 @@ void InserirArestaOrdenada(Grafo *g, int idxOrigem, const char *nomeProxEstacao,
     free(g->vertices);
     free(g);
  }
+
+ void ChecaCiclos(Grafo *g, int atual, int origem, int *visitado, int *total) {
+    // Percorre todas as arestas que saem do vértice atual
+    Node *a = g->vertices[atual].arestas;
+    while (a != NULL) {
+        int v = BuscarVertice(g, a->nomeProxEstacao);
+
+        // CASO 1: o vértice vizinho do atual é a própria origem, logo encontramos um ciclo
+        if (v == origem) {
+            (*total)++;
+
+        } else if (v != -1 && !visitado[v]) {
+            // CASO 2: o vértice vizinho do atual existe e ainda não foi visitado
+            visitado[v] = 1;          // marcamos v como visitado agora faz parte do caminho atual
+            ChecaCiclos(g, v, origem, visitado, total); // chama ChecaCiclos novamente passando v como parâmetro para ver o restante do caminho 
+            visitado[v] = 0;          // 
+
+        }
+        // CASO 3: v já foi visitado, portanto não precisamos fazer nada
+        a = a->prox; // próxima aresta do vértice atual
+    }
+}
