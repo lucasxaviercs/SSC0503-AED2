@@ -42,3 +42,5 @@
     void ImprimirGrafo(Grafo *g);
 
     void LiberarGrafo(Grafo *g);
+
+    void ChecaCiclos(Grafo *g, int atual, int origem, int *visitado, int *total);
