@@ -87,29 +87,31 @@ int main(int argc, char *argv[]){
         {
             char campoOrigem[50], valorOrigem[100];
             char campoDestino[50], valorDestino[100];
-            scanf("%s %s", arquivoEntrada, arquivoIndice);
-            scanf("%s", campoOrigem);
+            scanf("%s %s %s", arquivoEntrada, arquivoIndice, campoOrigem);
             ScanQuoteString(valorOrigem);
             scanf("%s", campoDestino);
             ScanQuoteString(valorDestino);
-
             Dijkstra(arquivoEntrada, arquivoIndice, campoOrigem, valorOrigem, campoDestino, valorDestino);
             break;
         }
 
         case ARVORE_GERADORA_MINIMA:
+        {
             char campoOrigem[50], valorOrigem[100];
-            scanf("%s %s", arquivoEntrada, campoOrigem);
+            scanf("%s %s %s", arquivoEntrada, arquivoIndice, campoOrigem);
             ScanQuoteString(valorOrigem);
             ArvoreGeradoraMinima(arquivoEntrada, arquivoIndice, campoOrigem, valorOrigem);
             break;
+        }
         
         case CONTAR_CICLOS:
+        {
             char campoOrigem[50], valorOrigem[100];
-            scanf("%s %s", arquivoEntrada, campoOrigem);
+            scanf("%s %s %s", arquivoEntrada, arquivoIndice, campoOrigem);
             ScanQuoteString(valorOrigem);
             ContarCiclos(arquivoEntrada, arquivoIndice, campoOrigem, valorOrigem);
             break;
+        }
 
         default:
             printf("Funcionalidade inválida.\n");

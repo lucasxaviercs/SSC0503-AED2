@@ -30,7 +30,7 @@ Grafo* InicializarGrafo() {
     return g;
 }
 
-Grafo* ConstruirGrafo(char *arquivoEntrada, char *arquivoIndice){
+Grafo* ConstruirGrafo(char *arquivoEntrada, char *arquivoIndice, int direcionado){
     FILE *arquivoBIN = fopen(arquivoEntrada, "rb");
     if (arquivoBIN == NULL) return NULL;
 
@@ -63,6 +63,7 @@ Grafo* ConstruirGrafo(char *arquivoEntrada, char *arquivoIndice){
     fseek(arquivoBIN, TAM_CABECALHO, SEEK_SET);
     Registro reg;
     
+    // Inserção dos vértices
     for (int i = 0; i < cabecalho.proxRRN; i++){
         reg.nomeEstacao = NULL;
         reg.nomeLinha = NULL;
@@ -80,13 +81,13 @@ Grafo* ConstruirGrafo(char *arquivoEntrada, char *arquivoIndice){
         LiberarStringRegistro(&reg);
     }
 
-    if (indiceCarregadoDoArquivo == 0){ // Ordena apenas se criamos na hora
+    if (indiceCarregadoDoArquivo == 0 && totalIndices > 0){ // Ordena apenas se criamos na hora
         qsort(vetorIndices, totalIndices, sizeof(IndexRegistro), CompararIndexRegistro);
     }
 
     fseek(arquivoBIN, TAM_CABECALHO, SEEK_SET);
 
-    // Inserir arestas com Busca Binária
+    // Inserção das arestas
     for (int i = 0; i < cabecalho.proxRRN; i++){
         reg.nomeEstacao = NULL;
         reg.nomeLinha = NULL;
@@ -95,23 +96,47 @@ Grafo* ConstruirGrafo(char *arquivoEntrada, char *arquivoIndice){
         if (reg.removido == '0'){
             int idxOrigem = BuscarVertice(g, reg.nomeEstacao);
 
-            // Aresta Normal
+            // Aresta comum
             if (reg.codProxEstacao != -1){
                 int posIndex = BuscarRegistroIndex(vetorIndices, totalIndices, reg.codProxEstacao);
                 if (posIndex != -1){
                     char *nomeProx = BuscarNomeNoDisco(arquivoBIN, vetorIndices[posIndex].RRN);
+                    
+                    // --- IDA ---
+                    // Insere o caminho de ida do registro original (Origem -> Destino)
                     InserirArestaOrdenada(g, idxOrigem, nomeProx, reg.distProxEstacao, reg.nomeLinha);
+                    
+                    // --- VOLTA ---
+                    // Insere o caminho inverso (Destino -> Origem) apenas se exigido
+                    if (direcionado == NAO_DIRECIONADO) {
+                        int idxDestino = BuscarVertice(g, nomeProx);
+                        if (idxDestino != -1){
+                            InserirArestaOrdenada(g, idxDestino, g->vertices[idxOrigem].nomeEstacao, reg.distProxEstacao, reg.nomeLinha);
+                        }
+                    }
                     free(nomeProx);
                 }
             }
 
-            // Aresta de Integração
-            if (reg.codEstIntegra != -1) {
+            // Aresta de integração
+            if (reg.codEstIntegra != -1){
                 int posIndex = BuscarRegistroIndex(vetorIndices, totalIndices, reg.codEstIntegra);
-                if (posIndex != -1) {
+                if (posIndex != -1){
                     char *nomeIntegra = BuscarNomeNoDisco(arquivoBIN, vetorIndices[posIndex].RRN);
-                    if (strcmp(reg.nomeEstacao, nomeIntegra) != 0) {
+                    if (strcmp(reg.nomeEstacao, nomeIntegra) != 0){
+                        
+                        // --- IDA ---
+                        // Insere o caminho de integração do registro original (Origem -> Destino)
                         InserirArestaOrdenada(g, idxOrigem, nomeIntegra, 0, "Integração");
+                        
+                        // --- VOLTA ---
+                        // Insere o caminho inverso da integração (Destino -> Origem) apenas se exigido
+                        if (direcionado == NAO_DIRECIONADO){
+                            int idxIntegra = BuscarVertice(g, nomeIntegra);
+                            if (idxIntegra != -1){
+                                InserirArestaOrdenada(g, idxIntegra, g->vertices[idxOrigem].nomeEstacao, 0, "Integração");
+                            }
+                        }
                     }
                     free(nomeIntegra);
                 }
@@ -179,72 +204,67 @@ int InserirVerticeOrdenado(Grafo *g, const char *nomeEstacao){
 }
 
 void InserirArestaOrdenada(Grafo *g, int idxOrigem, const char *nomeProxEstacao, int distancia, const char *nomeLinha){
-
-    if (g == NULL || nomeProxEstacao == NULL || nomeLinha == NULL) return;
+    if (g == NULL || idxOrigem == -1 || nomeProxEstacao == NULL || nomeLinha == NULL) return;
 
     Vertice *origem = &g->vertices[idxOrigem];
     Node *atual = origem->arestas;
     Node *anterior = NULL;
 
-    // Busca na linked list a posição alfabética correta ou um nó já existente
     while (atual != NULL && strcmp(atual->nomeProxEstacao, nomeProxEstacao) < 0){
         anterior = atual;
         atual = atual->prox;
     }
 
-    // SITUAÇÃO 1: nó de destino já existe (mesmo par de estação, linha diferente)
     if (atual != NULL && strcmp(atual->nomeProxEstacao, nomeProxEstacao) == 0){
-        // Evitar inserir linhas duplicadas na msm conexão
+        // PROTEÇÃO CONTRA O NULO (-1)
+        if (distancia != -1) {
+            if (atual->distProxEstacao == -1 || distancia < atual->distProxEstacao){
+                atual->distProxEstacao = distancia;
+            }
+        }
+        
         for (int i = 0; i < atual->n_linhas; i++){
             if (strcmp(atual->linhas[i], nomeLinha) == 0) return;
         }
 
-        // Reajustamos a matriz de strings (realocando) para ter a nova linha
         atual->linhas = (char**) realloc(atual->linhas, (atual->n_linhas + 1) * sizeof(char*));
-
         int j = atual->n_linhas - 1;
-        // Deslocamento para direita, para manter a ordem alfabética
         while (j >= 0 && strcmp(atual->linhas[j], nomeLinha) > 0){
             atual->linhas[j + 1] = atual->linhas[j];
             j--;
         }
-
         atual->linhas[j + 1] = (char*) malloc((strlen(nomeLinha) + 1) * sizeof(char));
         strcpy(atual->linhas[j + 1], nomeLinha);
         atual->n_linhas++;
-
         return;
     }
 
-    // SITUAÇÃO 2: nó de destino aparece pela primeira vez, então aloca-se um novo nó
     Node *novoNode = malloc(sizeof(Node));
-    novoNode->nomeProxEstacao = malloc( ( strlen(nomeProxEstacao ) + 1) * sizeof(char));
+    novoNode->nomeProxEstacao = malloc( (strlen(nomeProxEstacao) + 1) * sizeof(char));
     strcpy(novoNode->nomeProxEstacao, nomeProxEstacao);
-
     novoNode->distProxEstacao = distancia;
     novoNode->n_linhas = 1;
     novoNode->linhas = (char**) malloc(sizeof(char*));
-    novoNode->linhas[0] = (char*) malloc( ( strlen(nomeLinha) + 1) * sizeof(char));
+    novoNode->linhas[0] = (char*) malloc( (strlen(nomeLinha) + 1) * sizeof(char));
     strcpy(novoNode->linhas[0], nomeLinha);
-
     novoNode->prox = atual;
 
-    if (anterior == NULL){
-        origem->arestas = novoNode; // Inserção no início da lista
-    } else {
-        anterior->prox = novoNode; // Inserção no meio/fim
-    }
+    if (anterior == NULL) origem->arestas = novoNode;
+    else anterior->prox = novoNode;
 }
 
  void ImprimirGrafo(Grafo *g){
     if (g == NULL || g->n_vertices == 0) return;
 
     for (int i = 0; i < g->n_vertices; i++){
-        // Imprime o vértice atual (origem)
-        printf("%s", g->vertices[i].nomeEstacao);
-        
         Node *atual = g->vertices[i].arestas;
         
+        // Se não tiver nenhuma conexão de saída, só ignoramos e não imprimimos
+        if (atual == NULL) { continue;}
+
+        // Imprime o vértice de origem
+        printf("%s", g->vertices[i].nomeEstacao);
+
         // Percorre a lista de adjacências
         while (atual != NULL){
             // Imprime o destino e a distância

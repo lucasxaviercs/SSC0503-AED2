@@ -1,4 +1,5 @@
 #pragma once
+    
 
     #include <stdio.h>
     #include <stdlib.h>
@@ -8,6 +9,9 @@
     #include "registro.h"
     #include "index.h"
     #include "utils.h"
+
+    #define DIRECIONADO      1
+    #define NAO_DIRECIONADO  0
 
     typedef struct node {
         char *nomeProxEstacao;
@@ -30,7 +34,7 @@
     
     Grafo* InicializarGrafo();
 
-    Grafo* ConstruirGrafo(char *arquivoEntrada, char *arquivoIndice);
+    Grafo* ConstruirGrafo(char *arquivoEntrada, char *arquivoIndice, int direcionado);
 
     int BuscarVertice(Grafo *g, const char *nomeEstacao);
 

@@ -436,6 +436,11 @@ void MensagemRegistroNaoEncontrado()
     printf("Registro inexistente.\n");
 }
 
+/*Imprime a mensagem de falha na funcionalidade*/
+void MensagemFalhaFuncionalidade()
+{
+    printf("Falha na execução da funcionalidade.\n");
+}
 
 char VerificaEOF(FILE *arquivo)
 {

@@ -3,21 +3,30 @@
 #define INFINITO INT_MAX
 
 
-void GerarGrafo(char *arquivoEntrada, char *arquivoIndex){
-    Grafo *g = ConstruirGrafo(arquivoEntrada, arquivoIndex);
-    
-    if (g == NULL){
-        MensagemErro();
-        return;
+static void DFS_ImprimirAGM(Grafo *g, int u, int *ant, int *chave, int n) {
+    for (int v = 0; v < n; v++) {
+        // Se 'u' for o pai direto de 'v' na árvore gerada
+        if (ant[v] == u) {
+            printf("%s, %s, %d\n", g->vertices[u].nomeEstacao, g->vertices[v].nomeEstacao, chave[v]);
+            
+            // Aprofunda na árvore chamando a DFS para os descendentes de 'v'
+            DFS_ImprimirAGM(g, v, ant, chave, n);
+        }
     }
+}
+
+void GerarGrafo(char *arquivoEntrada, char *arquivoIndex){
+    Grafo *g = ConstruirGrafo(arquivoEntrada, arquivoIndex, DIRECIONADO);
+    
+    if (g == NULL) { MensagemFalhaFuncionalidade(); return; }
 
     ImprimirGrafo(g);
     LiberarGrafo(g);
 }
 
 void Dijkstra(char *arquivoEntrada, char *arquivoIndex, char *campoOrigem, char* valorOrigem, char *campoDestino, char* valorDestino){
-    Grafo *g = ConstruirGrafo(arquivoEntrada, arquivoIndex);
-    if (g == NULL) { MensagemErro(); return; }
+    Grafo *g = ConstruirGrafo(arquivoEntrada, arquivoIndex, NAO_DIRECIONADO);
+    if (g == NULL) { MensagemFalhaFuncionalidade(); return; }
 
     int idxOrigem = BuscarVertice(g, valorOrigem);
     int idxDestino = BuscarVertice(g, valorDestino);
@@ -56,11 +65,17 @@ void Dijkstra(char *arquivoEntrada, char *arquivoIndex, char *campoOrigem, char*
         Node *atual = g->vertices[u].arestas;
         while (atual != NULL){
             int v = BuscarVertice(g, atual->nomeProxEstacao);
-            if (v != -1 && !visitado[v]){
+            
+            if (v != -1 && !visitado[v] && atual->distProxEstacao != -1){
                 int peso = atual->distProxEstacao;
                 if (dist[u] + peso < dist[v]){
                     dist[v] = dist[u] + peso;
                     ant[v] = u;
+                } 
+                else if (dist[u] + peso == dist[v]){
+                    if (ant[v] != -1 && strcmp(g->vertices[u].nomeEstacao, g->vertices[ant[v]].nomeEstacao) < 0){
+                        ant[v] = u;
+                    }
                 }
             }
             atual = atual->prox;
@@ -88,13 +103,78 @@ void Dijkstra(char *arquivoEntrada, char *arquivoIndex, char *campoOrigem, char*
     free(dist); free(ant); free(visitado); LiberarGrafo(g);
 }
 
+void ArvoreGeradoraMinima(char *arquivoEntrada, char *arquivoIndice, char *campoOrigem, char* valorOrigem){
+    Grafo *g = ConstruirGrafo(arquivoEntrada, arquivoIndice, NAO_DIRECIONADO);
+    if (g == NULL) { MensagemFalhaFuncionalidade(); return; }
+
+    int idxOrigem = BuscarVertice(g, valorOrigem);
+    if (idxOrigem == -1) { MensagemFalhaFuncionalidade(); LiberarGrafo(g); return; }
+
+    int n = g->n_vertices;
+    int *chave = malloc(n * sizeof(int));
+    int *ant = malloc(n * sizeof(int));
+    int *visitado = calloc(n, sizeof(int));
+
+    for (int i = 0; i < n; i++){
+        chave[i] = INFINITO;
+        ant[i] = -1;
+    }
+    chave[idxOrigem] = 0;
+    
+    for (int count = 0; count < n; count++){
+        int u = -1;
+        int min_chave = INFINITO;
+
+        for (int v = 0; v < n; v++){
+            if (!visitado[v]){
+                if (chave[v] < min_chave){
+                    min_chave = chave[v];
+                    u = v;
+                }
+                else if (chave[v] == min_chave && min_chave != INFINITO){
+                    if (ant[u] != -1 && ant[v] != -1){
+                        if (strcmp(g->vertices[ant[v]].nomeEstacao, g->vertices[ant[u]].nomeEstacao) < 0){
+                            u = v;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (u == -1) break;
+        visitado[u] = 1;
+
+        Node *atual = g->vertices[u].arestas;
+        while (atual != NULL){
+            int v = BuscarVertice(g, atual->nomeProxEstacao);
+            int pesoDaAresta = atual->distProxEstacao;
+
+            if (v != -1 && !visitado[v] && pesoDaAresta != -1){
+                if (pesoDaAresta < chave[v]){
+                    chave[v] = pesoDaAresta;
+                    ant[v] = u;              
+                } 
+                else if (pesoDaAresta == chave[v]){
+                    if (ant[v] != -1 && strcmp(g->vertices[u].nomeEstacao, g->vertices[ant[v]].nomeEstacao) < 0){
+                        ant[v] = u;
+                    }
+                }
+            }
+            atual = atual->prox;
+        }
+    }
+
+    DFS_ImprimirAGM(g, idxOrigem, ant, chave, n);
+    free(chave); free(ant); free(visitado); LiberarGrafo(g);
+}
+
 void ContarCiclos(char *arquivoEntrada, char *arquivoIndex, char *campoOrigem, char *valorOrigem) {
-    Grafo *g = ConstruirGrafo(arquivoEntrada, arquivoIndex);
-    if (g == NULL) { printf("Falha na execução da funcionalidade.\n"); return; }
+    Grafo *g = ConstruirGrafo(arquivoEntrada, arquivoIndex, DIRECIONADO);
+    if (g == NULL) { MensagemFalhaFuncionalidade(); return; }
 
     // busca o índice do vértice de origem no grafo
     int origem = BuscarVertice(g, valorOrigem);
-    if (origem == -1) { LiberarGrafo(g); printf("Falha na execução da funcionalidade.\n"); return; }
+    if (origem == -1) { LiberarGrafo(g); MensagemFalhaFuncionalidade(); return; }
 
     // cria um array de flags para marcar os vértices que já visitamos
     // calloc já inicializa com 0, ou seja, não visitado

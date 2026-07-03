@@ -60,6 +60,8 @@
     void MensagemErro();
     // Imprime a mensagem de registro não encontrado
     void MensagemRegistroNaoEncontrado();
+    // Imprime a mensagem de falha na funcionalidade
+    void MensagemFalhaFuncionalidade();
 
     char VerificaEOF(FILE *f);
     void BinarioNaTela(char *arquivo);
