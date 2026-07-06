@@ -235,8 +235,11 @@ A lista é ordenada pelo nome da estação de destino. */
 void InserirArestaOrdenada(Grafo *g, int idxOrigem, const char *nomeProxEstacao, int distancia, const char *nomeLinha){
     if (g == NULL || idxOrigem == -1 || nomeProxEstacao == NULL || nomeLinha == NULL) return;
 
+    // Obtém o ponteiro direto para o vértice de origem dentro do array do grafo
     Vertice *origem = &g->vertices[idxOrigem];
+    // Ponteiro auxiliar para percorrer os nós da lista encadeada a partir da cabeça
     Node *atual = origem->arestas;
+    // Guarda o nó anterior
     Node *anterior = NULL;
 
     // Percorre a lista encadeada até encontrar o ponto de inserção correto (ordem alfabética do destino)
