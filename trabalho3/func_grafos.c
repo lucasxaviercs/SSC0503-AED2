@@ -107,33 +107,46 @@ void ArvoreGeradoraMinima(char *arquivoEntrada, char *arquivoIndice, char *campo
     Grafo *g = ConstruirGrafo(arquivoEntrada, arquivoIndice, NAO_DIRECIONADO);
     if (g == NULL) { MensagemFalhaFuncionalidade(); return; }
 
+    // pegamos o índice do vértice de origem no grafo
     int idxOrigem = BuscarVertice(g, valorOrigem);
     if (idxOrigem == -1) { MensagemFalhaFuncionalidade(); LiberarGrafo(g); return; }
 
-    int n = g->n_vertices;
-    int *chave = malloc(n * sizeof(int));
-    int *ant = malloc(n * sizeof(int));
-    int *visitado = calloc(n, sizeof(int));
+    int n = g->n_vertices; 
+    int *chave = malloc(n * sizeof(int));    // vetor para armazenar os pesos das arestas que conectam os vértices na AGM
+    int *ant = malloc(n * sizeof(int));      // vetor para armazenar os antecessores dos vértices na AGM
+    int *visitado = calloc(n, sizeof(int));  // controle do que já foi visitado (já foi inserido na AGM) para saber onde devemos analisar
 
+    // inicializamos os vetores de peso com INFINITO  e antecessores com -1
     for (int i = 0; i < n; i++){
         chave[i] = INFINITO;
         ant[i] = -1;
     }
 
+    // Começamos a partir da origem, então seu peso é 0 e marcamos como visitada
+    // Como a AGM começa dela, não colocamos antecessor
     chave[idxOrigem] = 0;
     visitado[idxOrigem] = 1;
 
+    // para cada vértice já visitado, vamos procurar o vizinho com menor peso que ainda não visitamos para conectar a AGM
     for (int i = 0; i < n - 1; i++){
+        // variáveis temporárias para armazenar infos dos vizinho com menor peso até o momento
+        // ao final, elas terão a informação do vizinho de menor peso que é o que vamos conectar a AGM
         int vizinho = -1;
         int menorPeso = INFINITO;
         char *nomeVizinho = NULL; 
 
+        // percorremos o vetor de visitados para analisar os vizinhos dos vértices que já estão na AGM
         for (int j = 0; j < n; j++){
             if (visitado[j]) {
+                // para cada vértice visitado, varremos sua lista de adjacência para encontrar o vizinho de menor peso
                 Node *atual = g->vertices[j].arestas;
                 while (atual != NULL) {
+                    // pegamos o índice do vizinho
                     int idxVizinho = BuscarVertice(g, atual->nomeProxEstacao);
+                    // checamos se ele já não foi visitado
                     if (!visitado[idxVizinho]) {
+                        // se o peso para conectá-lo for menor que o menor peso encontrado até agora, inserimos ele
+                        // caso haja empate, pegamos o vizinho que vem antes em ordem alfabética
                         if (atual->distProxEstacao < menorPeso || (atual->distProxEstacao == menorPeso && strcmp(atual->nomeProxEstacao, nomeVizinho) < 0)) {
                             menorPeso = atual->distProxEstacao;
                             vizinho = idxVizinho;
@@ -146,11 +159,14 @@ void ArvoreGeradoraMinima(char *arquivoEntrada, char *arquivoIndice, char *campo
             }
         }
 
-        if (vizinho == -1) break; 
+        if (vizinho == -1) break;
+        
+        // ao final, marcamos o vizinho de menor peso como visitado e atualizamos o vetor de pesos
         visitado[vizinho] = 1;
         chave[vizinho] = menorPeso;
     }
 
+    // após todo o algoritmo terminar, chamamos a função para imprimir a AGM no formato correto via busca em profundidade
     DFS_ImprimirAGM(g, idxOrigem, ant, chave, n);
     free(chave); free(ant); free(visitado); LiberarGrafo(g);
 }
