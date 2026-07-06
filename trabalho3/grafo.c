@@ -1,5 +1,18 @@
 #include "grafo.h"
 
+
+/* Aloca o espaço base na memória para o Grafo e zera os atributos. */
+Grafo* InicializarGrafo() {
+    Grafo *g = malloc(sizeof(Grafo));
+    if (g != NULL){
+        g->n_vertices = 0;
+        g->vertices = NULL;
+    }
+
+    return g;
+}
+
+// ==== FUNÇÃO AUXILIAR PARA A ConstruirGrafo() ====
 /* Busca o nome de uma estação diretamente no arquivo de dados utilizando o RRN associado.
 É uma função auxiliar para quando temos apenas o ID (codProxEstacao) mas precisamos da string do nome. */
 static char* BuscarNomeNoDisco(FILE *arquivoBIN, int rrnDestino){
@@ -25,17 +38,6 @@ static char* BuscarNomeNoDisco(FILE *arquivoBIN, int rrnDestino){
     fseek(arquivoBIN, posAtual, SEEK_SET);
     
     return nomeEncontrado;
-}
-
-/* Aloca o espaço base na memória para o Grafo e zera os atributos. */
-Grafo* InicializarGrafo() {
-    Grafo *g = malloc(sizeof(Grafo));
-    if (g != NULL){
-        g->n_vertices = 0;
-        g->vertices = NULL;
-    }
-
-    return g;
 }
 
 /* Constrói o grafo lendo os vértices e, em seguida, as arestas, a partir do arquivo de dados.
