@@ -119,49 +119,36 @@ void ArvoreGeradoraMinima(char *arquivoEntrada, char *arquivoIndice, char *campo
         chave[i] = INFINITO;
         ant[i] = -1;
     }
-    chave[idxOrigem] = 0;
-    
-    for (int count = 0; count < n; count++){
-        int u = -1;
-        int min_chave = INFINITO;
 
-        for (int v = 0; v < n; v++){
-            if (!visitado[v]){
-                if (chave[v] < min_chave){
-                    min_chave = chave[v];
-                    u = v;
-                }
-                else if (chave[v] == min_chave && min_chave != INFINITO){
-                    if (ant[u] != -1 && ant[v] != -1){
-                        if (strcmp(g->vertices[ant[v]].nomeEstacao, g->vertices[ant[u]].nomeEstacao) < 0){
-                            u = v;
+    chave[idxOrigem] = 0;
+    visitado[idxOrigem] = 1;
+
+    for (int i = 0; i < n - 1; i++){
+        int vizinho = -1;
+        int menorPeso = INFINITO;
+        char *nomeVizinho = NULL; 
+
+        for (int j = 0; j < n; j++){
+            if (visitado[j]) {
+                Node *atual = g->vertices[j].arestas;
+                while (atual != NULL) {
+                    int idxVizinho = BuscarVertice(g, atual->nomeProxEstacao);
+                    if (!visitado[idxVizinho]) {
+                        if (atual->distProxEstacao < menorPeso || (atual->distProxEstacao == menorPeso && strcmp(atual->nomeProxEstacao, nomeVizinho) < 0)) {
+                            menorPeso = atual->distProxEstacao;
+                            vizinho = idxVizinho;
+                            nomeVizinho = atual->nomeProxEstacao;
+                            ant[vizinho] = j;
                         }
                     }
+                    atual = atual->prox;
                 }
             }
         }
 
-        if (u == -1) break;
-        visitado[u] = 1;
-
-        Node *atual = g->vertices[u].arestas;
-        while (atual != NULL){
-            int v = BuscarVertice(g, atual->nomeProxEstacao);
-            int pesoDaAresta = atual->distProxEstacao;
-
-            if (v != -1 && !visitado[v] && pesoDaAresta != -1){
-                if (pesoDaAresta < chave[v]){
-                    chave[v] = pesoDaAresta;
-                    ant[v] = u;              
-                } 
-                else if (pesoDaAresta == chave[v]){
-                    if (ant[v] != -1 && strcmp(g->vertices[u].nomeEstacao, g->vertices[ant[v]].nomeEstacao) < 0){
-                        ant[v] = u;
-                    }
-                }
-            }
-            atual = atual->prox;
-        }
+        if (vizinho == -1) break; 
+        visitado[vizinho] = 1;
+        chave[vizinho] = menorPeso;
     }
 
     DFS_ImprimirAGM(g, idxOrigem, ant, chave, n);
