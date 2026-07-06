@@ -10,6 +10,7 @@
     #include "index.h"
     #include "utils.h"
 
+    #define INFINITO         INT_MAX
     #define DIRECIONADO      1
     #define NAO_DIRECIONADO  0
 

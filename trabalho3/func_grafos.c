@@ -1,19 +1,5 @@
 #include "funcionalidades.h"
 
-#define INFINITO INT_MAX
-
-
-static void DFS_ImprimirAGM(Grafo *g, int u, int *ant, int *chave, int n) {
-    for (int v = 0; v < n; v++) {
-        // Se 'u' for o pai direto de 'v' na árvore gerada
-        if (ant[v] == u) {
-            printf("%s, %s, %d\n", g->vertices[u].nomeEstacao, g->vertices[v].nomeEstacao, chave[v]);
-            
-            // Aprofunda na árvore chamando a DFS para os descendentes de 'v'
-            DFS_ImprimirAGM(g, v, ant, chave, n);
-        }
-    }
-}
 
 void GerarGrafo(char *arquivoEntrada, char *arquivoIndex){
     Grafo *g = ConstruirGrafo(arquivoEntrada, arquivoIndex, DIRECIONADO);
@@ -103,72 +89,121 @@ void Dijkstra(char *arquivoEntrada, char *arquivoIndex, char *campoOrigem, char*
     free(dist); free(ant); free(visitado); LiberarGrafo(g);
 }
 
+
+// ==== FUNÇÕES AUXILIARES PARA A ÁRVORE GERADORA MÍNIMA ====
+
+static void DFS_ImprimirAGM(Grafo *g, int u, int *ant, int *chave, int n) {
+    for (int v = 0; v < n; v++) {
+        // Se 'u' for o pai direto de 'v' na árvore gerada
+        if (ant[v] == u) {
+            printf("%s, %s, %d\n", g->vertices[u].nomeEstacao, g->vertices[v].nomeEstacao, chave[v]);
+            
+            // Aprofunda na árvore chamando a DFS para os descendentes de 'v'
+            DFS_ImprimirAGM(g, v, ant, chave, n);
+        }
+    }
+}
+
+// Estrutura temporária para armazenar as arestas de forma não-direcionada (simétrica)
+typedef struct {
+    int u;
+    int v;
+    int peso;
+} ArestaND;
+
 void ArvoreGeradoraMinima(char *arquivoEntrada, char *arquivoIndice, char *campoOrigem, char* valorOrigem){
-    Grafo *g = ConstruirGrafo(arquivoEntrada, arquivoIndice, NAO_DIRECIONADO);
+    // Construir como DIRECIONADO para conseguirmos identificar os sumidouros (folhas puras)
+    Grafo *g = ConstruirGrafo(arquivoEntrada, arquivoIndice, DIRECIONADO);
     if (g == NULL) { MensagemFalhaFuncionalidade(); return; }
 
-    // pegamos o índice do vértice de origem no grafo
     int idxOrigem = BuscarVertice(g, valorOrigem);
     if (idxOrigem == -1) { MensagemFalhaFuncionalidade(); LiberarGrafo(g); return; }
 
-    int n = g->n_vertices; 
-    int *chave = malloc(n * sizeof(int));    // vetor para armazenar os pesos das arestas que conectam os vértices na AGM
-    int *ant = malloc(n * sizeof(int));      // vetor para armazenar os antecessores dos vértices na AGM
-    int *visitado = calloc(n, sizeof(int));  // controle do que já foi visitado (já foi inserido na AGM) para saber onde devemos analisar
+    int n = g->n_vertices;
+    
+    // Contar total de arestas para alocação da estrutura auxiliar
+    int max_arestas = 0;
+    for(int i = 0; i < n; i++) {
+        Node *atual = g->vertices[i].arestas;
+        while(atual) { max_arestas++; atual = atual->prox; }
+    }
 
-    // inicializamos os vetores de peso com INFINITO  e antecessores com -1
+    // Estrutura temporária para armazenar as arestas de forma não-direcionada (simétrica)
+    ArestaND *arestas = malloc(max_arestas * sizeof(ArestaND));
+    int m = 0;
+    
+    // Coletar arestas ignorando os sumidouros puros
+    for (int i = 0; i < n; i++) {
+        Node *atual = g->vertices[i].arestas;
+        while (atual != NULL) {
+            int v = BuscarVertice(g, atual->nomeProxEstacao);
+            // Estratégia: ignora arestas cujo destino não possui saídas (lista vazia)
+            if (v != -1 && g->vertices[v].arestas != NULL) {
+                arestas[m].u = i;
+                arestas[m].v = v;
+                arestas[m].peso = atual->distProxEstacao;
+                m++;
+            }
+            atual = atual->prox;
+        }
+    }
+
+    int *chave = malloc(n * sizeof(int));
+    int *ant = malloc(n * sizeof(int));
+    int *visitado = calloc(n, sizeof(int));
+
     for (int i = 0; i < n; i++){
         chave[i] = INFINITO;
         ant[i] = -1;
     }
 
-    // Começamos a partir da origem, então seu peso é 0 e marcamos como visitada
-    // Como a AGM começa dela, não colocamos antecessor
     chave[idxOrigem] = 0;
     visitado[idxOrigem] = 1;
+    int count = 1;
 
-    // para cada vértice já visitado, vamos procurar o vizinho com menor peso que ainda não visitamos para conectar a AGM
-    for (int i = 0; i < n - 1; i++){
-        // variáveis temporárias para armazenar infos dos vizinho com menor peso até o momento
-        // ao final, elas terão a informação do vizinho de menor peso que é o que vamos conectar a AGM
-        int vizinho = -1;
+    // Algoritmo de Prim sobre a lista de arestas
+    while (count < n) {
+        int melhorU = -1, melhorV = -1;
         int menorPeso = INFINITO;
-        char *nomeVizinho = NULL; 
 
-        // percorremos o vetor de visitados para analisar os vizinhos dos vértices que já estão na AGM
-        for (int j = 0; j < n; j++){
-            if (visitado[j]) {
-                // para cada vértice visitado, varremos sua lista de adjacência para encontrar o vizinho de menor peso
-                Node *atual = g->vertices[j].arestas;
-                while (atual != NULL) {
-                    // pegamos o índice do vizinho
-                    int idxVizinho = BuscarVertice(g, atual->nomeProxEstacao);
-                    // checamos se ele já não foi visitado
-                    if (!visitado[idxVizinho]) {
-                        // se o peso para conectá-lo for menor que o menor peso encontrado até agora, inserimos ele
-                        // caso haja empate, pegamos o vizinho que vem antes em ordem alfabética
-                        if (atual->distProxEstacao < menorPeso || (atual->distProxEstacao == menorPeso && strcmp(atual->nomeProxEstacao, nomeVizinho) < 0)) {
-                            menorPeso = atual->distProxEstacao;
-                            vizinho = idxVizinho;
-                            nomeVizinho = atual->nomeProxEstacao;
-                            ant[vizinho] = j;
-                        }
-                    }
-                    atual = atual->prox;
-                }
+        // Varre a lista procurando a melhor aresta de fronteira
+        for (int i = 0; i < m; i++) {
+            int u = arestas[i].u;
+            int v = arestas[i].v;
+            int peso = arestas[i].peso;
+
+            // Aresta deve ter exatamente um extremo dentro da árvore (visitado) e outro fora
+            if (visitado[u] == visitado[v]) continue;
+
+            int interno = visitado[u] ? u : v;
+            int externo = visitado[u] ? v : u;
+
+            // Critérios de desempate estritos: 
+            // Menor peso -> Menor ID do vértice interno -> Menor ID do vértice externo
+            if (peso < menorPeso ||
+               (peso == menorPeso && interno < melhorU) ||
+               (peso == menorPeso && interno == melhorU && externo < melhorV)) {
+                menorPeso = peso;
+                melhorU = interno;
+                melhorV = externo;
             }
         }
 
-        if (vizinho == -1) break;
-        
-        // ao final, marcamos o vizinho de menor peso como visitado e atualizamos o vetor de pesos
-        visitado[vizinho] = 1;
-        chave[vizinho] = menorPeso;
+        // Se não encontrou vizinho válido, o componente conexo esgotou
+        if (melhorV == -1) break;
+
+        visitado[melhorV] = 1;
+        chave[melhorV] = menorPeso;
+        ant[melhorV] = melhorU;
+        count++;
     }
 
-    // após todo o algoritmo terminar, chamamos a função para imprimir a AGM no formato correto via busca em profundidade
+    // Imprime via DFS mantendo a lógica de ordem pre-existente
     DFS_ImprimirAGM(g, idxOrigem, ant, chave, n);
-    free(chave); free(ant); free(visitado); LiberarGrafo(g);
+
+    free(arestas);
+    free(chave); free(ant); free(visitado);
+    LiberarGrafo(g);
 }
 
 void ContarCiclos(char *arquivoEntrada, char *arquivoIndex, char *campoOrigem, char *valorOrigem) {
