@@ -49,12 +49,11 @@
 
     // ================== FUNC_GRAFOS =================
 
-    // a partir do arquivo de dados binário, gera um grafo que representa as estações, conexões e distâncias entre elas
+    // Constrói um grafo direcionado e ponderado a partir dos arquivos binários e imprime as listas de adjacências
     void GerarGrafo(char *arquivoEntrada, char *arquivoIndex);
-    // dado uma estação de origem e uma de destino, retorna o menor caminho entre elas
+    // Aplica o Algoritmo de Dijkstra em um grafo não-direcionado para encontrar a rota mais curta entre duas estações e imprime o caminho, n° de paradas e custo
     void Dijkstra(char *arquivoEntrada, char *arquivoIndex, char *campoOrigem, char*valorOrigem, char *campoDestino, char*valorDestino);
-    // dado uma estação de origem, encontra uma forma de conectar todas as outras com o menor percurso possível
+    // Constrói a AGM a partir de uma origem usando o Algoritmo de Prim, ignora estações terminais (sem saída) e imprime as conexões por Busca em Profundidade (DFS)
     void ArvoreGeradoraMinima(char *arquivoEntrada, char *arquivoIndex, char *campoOrigem, char*valorOrigem);
-    // dado uma estação de origem, retorna a quantidade de ciclos simples existentes no grafo a partir dela. Se não houver ciclos, retorna -1
+    // Utiliza DFS com backtracking sobre um grafo estritamente direcionado para contabilizar e retornar quantos ciclos simples começam e terminam na estação de origem.
     void ContarCiclos(char *arquivoEntrada, char *arquivoIndex, char *campoOrigem, char *valorOrigem);
-
